@@ -14,12 +14,12 @@ Prefer the one-command setup path:
 npm run setup
 ```
 
-Before setup, the user should replace `example_resume.pdf` with the candidate resume PDF and get their Telegram chatId from the shared bot.
+Before setup, the user should replace `example_resume.pdf` with the candidate resume PDF and get their Telegram chatId from `@job_fit_analyzer_bot`.
 
 The human-facing setup contract is:
 
 1. Replace `example_resume.pdf`.
-2. Get chatId from the shared bot.
+2. Get chatId from `@job_fit_analyzer_bot`.
 3. Run `npm run setup`.
 
 Use `--force` only when the user explicitly wants to overwrite existing local candidate files.

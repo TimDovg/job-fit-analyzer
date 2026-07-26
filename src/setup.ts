@@ -177,7 +177,7 @@ async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupIn
     const search = args.search ?? await askWithDefault(rl, "Target roles / search description", defaults.search);
     let chatId = args.chatId;
     if (args.telegram !== false) {
-      chatId = await askWithDefault(rl, "Telegram chatId from the shared bot", defaults.chatId ?? "");
+      chatId = await askWithDefault(rl, "Telegram chatId from @job_fit_analyzer_bot", defaults.chatId ?? "");
     }
 
     return {
@@ -523,7 +523,7 @@ Options:
   --dou-url <url>            Exact DOU listing URL
   --min-score <number>       Telegram reporting threshold
   --lookback-hours <number>  Vacancy freshness window
-  --chat-id <id>             Telegram chatId from the shared bot
+  --chat-id <id>             Telegram chatId from @job_fit_analyzer_bot
   --telegram / --no-telegram Enable or disable Telegram reporting
   --force                    Overwrite existing local config/resume/profile files
 `);

@@ -31,7 +31,7 @@ The candidate is configured through files, not hardcoded in source code:
 Human setup is intentionally only three steps:
 
 1. Replace `example_resume.pdf` with your own resume PDF.
-2. Get your Telegram `chatId` from the shared bot.
+2. Get your Telegram `chatId` from `@job_fit_analyzer_bot`.
 3. Run `npm run setup`.
 
 ```bash
@@ -62,7 +62,7 @@ Finally, create a Codex scheduled task using the generated `codex-task-prompt.md
 Default happy path:
 
 1. Replace `example_resume.pdf` with the candidate resume PDF.
-2. Get the candidate's Telegram `chatId` from the shared bot.
+2. Get the candidate's Telegram `chatId` from `@job_fit_analyzer_bot`.
 3. Run `npm run setup`.
 
 `npm run setup` will extract the resume, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
@@ -84,7 +84,7 @@ Useful setup flags:
 - `--dou-url`: exact DOU listing URL if category is not enough.
 - `--min-score`: reporting threshold.
 - `--lookback-hours`: vacancy freshness window.
-- `--chat-id`: Telegram chatId from the shared bot.
+- `--chat-id`: Telegram chatId from `@job_fit_analyzer_bot`.
 - `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
 
