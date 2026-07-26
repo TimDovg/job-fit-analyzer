@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: job-fit-notification-relay
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run relay
+    healthCheckPath: /health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false

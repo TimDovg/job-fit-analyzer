@@ -159,6 +159,20 @@ For the public candidate project, `npm run telegram:send` should use `NOTIFICATI
 
 ## Private Notification Relay
 
+### Deploy On Render
+
+The repo includes `render.yaml` for Render Blueprint deployment.
+
+1. In Render, create a new Blueprint from this GitHub repository.
+2. When Render asks for environment variables, set `TELEGRAM_BOT_TOKEN` to the shared bot token.
+3. Deploy the service.
+4. Open `/health` on the deployed URL and expect `{"ok":true}`.
+5. Put the relay endpoint into `.env.example`:
+
+```env
+NOTIFICATION_WEBHOOK_URL=https://your-render-service.onrender.com/telegram
+```
+
 One-time owner setup:
 
 1. Deploy this project somewhere private/server-side.
