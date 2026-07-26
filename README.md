@@ -49,6 +49,8 @@ The setup command creates local, gitignored files:
 - `candidate/job-fit-analyzer/references/candidate-profile.md`
 - `codex-task-prompt.md`
 
+`codex-task-prompt.md` is generated locally and intentionally ignored by git because it contains local paths and candidate-specific values. You will not see it in GitHub before running setup.
+
 Then run:
 
 ```bash
