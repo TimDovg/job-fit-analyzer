@@ -204,7 +204,7 @@ NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegra
 TELEGRAM_CHAT_ID=123456789
 ```
 
-Optional hardening: set `NOTIFICATION_RELAY_SECRET` on the relay and the matching `NOTIFICATION_WEBHOOK_SECRET` only in trusted sender environments.
+Optional hardening for the relay owner only: set `NOTIFICATION_RELAY_SECRET` on the relay and `NOTIFICATION_WEBHOOK_SECRET` only in trusted sender environments. Do not put these in the candidate `.env.example`.
 
 If you want candidates to configure only `chatId`, deploy the relay with rate limiting/allowlisting and commit the non-secret `NOTIFICATION_WEBHOOK_URL` default into `.env.example`.
 
