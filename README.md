@@ -15,6 +15,8 @@ Codex scheduled task
   -> analyzes vacancies with the current Codex model
   -> writes report text
   -> uses npm run telegram:send for Telegram delivery
+  -> telegram:send calls a private notification relay
+  -> relay holds TELEGRAM_BOT_TOKEN and calls Telegram Bot API
 ```
 
 The candidate is configured through files, not hardcoded in source code:
@@ -22,7 +24,7 @@ The candidate is configured through files, not hardcoded in source code:
 - `config/job-watch.config.json` controls search sources, limits, score threshold, paths, and runtime behavior.
 - `candidate/job-fit-analyzer/references/resume.md` is the full factual CV.
 - `candidate/job-fit-analyzer/references/candidate-profile.md` is the positioning guide for scoring and application text.
-- `.env` contains Telegram secrets and optional path/runtime overrides.
+- `.env` contains the candidate chat id, the notification relay URL, and optional path/runtime overrides.
 
 ## Quick Start
 
@@ -64,6 +66,8 @@ Default happy path:
 3. Run `npm run setup`.
 
 `npm run setup` will extract the resume, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
+
+For this to stay a three-step candidate flow, the repo owner should first deploy the private notification relay and put its public, non-secret `/telegram` URL into `.env.example` as `NOTIFICATION_WEBHOOK_URL`.
 
 For non-interactive setup, pass the chat id directly:
 
@@ -149,7 +153,46 @@ npm run telegram:send -- /tmp/vacancy-report.txt
 
 The Codex scheduled task prompt uses this command after it has already produced the final report text.
 
-The shared bot token should be provided by the owner of the shared bot or the Codex scheduled task environment. Do not publish a bot token in the repository.
+For the public candidate project, `npm run telegram:send` should use `NOTIFICATION_WEBHOOK_URL`.
+
+`TELEGRAM_BOT_TOKEN` must live only on the private notification relay, never in the public repository and never in candidate setup files.
+
+## Private Notification Relay
+
+One-time owner setup:
+
+1. Deploy this project somewhere private/server-side.
+2. Set `TELEGRAM_BOT_TOKEN` in that platform's secrets/env.
+3. Run `npm run relay`.
+4. Put the public relay endpoint into this repo's `.env.example`:
+
+```env
+NOTIFICATION_WEBHOOK_URL=https://your-relay.example.com/telegram
+```
+
+Run this only in the private environment controlled by the shared bot owner:
+
+```bash
+npm run relay
+```
+
+Set `TELEGRAM_BOT_TOKEN` in the deployment platform's private environment before starting it.
+
+The relay exposes:
+
+- `GET /health`
+- `POST /telegram`
+
+Candidate scheduled tasks send to `NOTIFICATION_WEBHOOK_URL`, for example:
+
+```env
+NOTIFICATION_WEBHOOK_URL=https://your-relay.example.com/telegram
+TELEGRAM_CHAT_ID=123456789
+```
+
+Optional hardening: set `NOTIFICATION_RELAY_SECRET` on the relay and the matching `NOTIFICATION_WEBHOOK_SECRET` only in trusted sender environments.
+
+If you want candidates to configure only `chatId`, deploy the relay with rate limiting/allowlisting and commit the non-secret `NOTIFICATION_WEBHOOK_URL` default into `.env.example`.
 
 ## Public Repo Notes
 

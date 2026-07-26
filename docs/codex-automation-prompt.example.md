@@ -9,6 +9,7 @@ Replace placeholders before creating the automation:
 - `{{SEARCH_DESCRIPTION}}`
 - `{{SKILL_PATH}}`
 - `{{STATE_PATH}}`
+- `{{NOTIFICATION_WEBHOOK_URL}}`
 - `{{TELEGRAM_CHAT_ID}}`
 
 ```text
@@ -27,7 +28,9 @@ Important constraints:
 - Keep operational problems in two categories:
   - `recoveredWarnings`: transient failures that were successfully retried.
   - `operationalErrors`: unrecovered failures that affected the run.
-- Send vacancy and error Telegram messages to chat id `{{TELEGRAM_CHAT_ID}}` when Telegram is enabled. The shared bot token must be available as `TELEGRAM_BOT_TOKEN` in this project's `.env` or the Codex scheduled task environment; do not print the token.
+- Send vacancy and error Telegram messages to chat id `{{TELEGRAM_CHAT_ID}}` when Telegram is enabled.
+- Use the notification relay at `{{NOTIFICATION_WEBHOOK_URL}}`; the scheduled task must not require or print `TELEGRAM_BOT_TOKEN`.
+- `TELEGRAM_BOT_TOKEN` belongs only on the private notification relay controlled by the shared bot owner.
 
 Workflow:
 1. Read `{{PROJECT_DIR}}/config/job-watch.config.json`.

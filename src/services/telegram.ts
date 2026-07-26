@@ -7,8 +7,8 @@ export class Telegram {
     if (!config.telegram.enabled) {
       throw new Error("Telegram is disabled in config.");
     }
-    if (!config.telegramBotToken) {
-      throw new Error("TELEGRAM_BOT_TOKEN is required");
+    if (!config.notificationWebhookUrl && !config.telegramBotToken) {
+      throw new Error("NOTIFICATION_WEBHOOK_URL is required. TELEGRAM_BOT_TOKEN is only for private relay/local fallback.");
     }
     if (!config.telegramChatId) {
       throw new Error("TELEGRAM_CHAT_ID is required. Send /start to your bot, then run npm run doctor.");
@@ -17,21 +17,46 @@ export class Telegram {
 
   async send(text: string): Promise<void> {
     for (const chunk of splitMessage(formatTelegramHtml(text))) {
-      const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: config.telegramChatId,
-          text: chunk,
-          parse_mode: "HTML",
-          disable_web_page_preview: true
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Telegram send failed: ${response.status} ${await response.text()}`);
-      }
+      await sendChunk(chunk);
     }
+  }
+}
+
+async function sendChunk(text: string): Promise<void> {
+  if (config.notificationWebhookUrl) {
+    const response = await fetch(config.notificationWebhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(config.notificationWebhookSecret ? { Authorization: `Bearer ${config.notificationWebhookSecret}` } : {})
+      },
+      body: JSON.stringify({
+        chatId: config.telegramChatId,
+        text,
+        parseMode: "HTML",
+        disableWebPagePreview: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Notification webhook failed: ${response.status} ${await response.text()}`);
+    }
+    return;
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: config.telegramChatId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Telegram send failed: ${response.status} ${await response.text()}`);
   }
 }
 

@@ -73,6 +73,11 @@ async function main(): Promise<void> {
   console.log("- candidate/job-fit-analyzer/references/resume.md");
   console.log("- candidate/job-fit-analyzer/references/candidate-profile.md");
   console.log(`- ${generatedPromptPath}`);
+  if ((inputs.telegram ?? true) && !readEnvValue("NOTIFICATION_WEBHOOK_URL") && !readEnvValue("TELEGRAM_BOT_TOKEN")) {
+    console.log("");
+    console.log("Notification relay is not configured yet.");
+    console.log("For the public three-step candidate flow, the repo owner should put NOTIFICATION_WEBHOOK_URL in .env.example before publishing.");
+  }
   console.log("");
   console.log("Next:");
   console.log("1. Run: npm run doctor");
@@ -337,6 +342,7 @@ function writeCodexPrompt(args: SetupInputs): void {
     SEARCH_DESCRIPTION: args.search,
     SKILL_PATH: projectPath("candidate/job-fit-analyzer/SKILL.md"),
     STATE_PATH: projectPath("data/chatgpt-scheduled-state.json"),
+    NOTIFICATION_WEBHOOK_URL: readEnvValue("NOTIFICATION_WEBHOOK_URL"),
     TELEGRAM_CHAT_ID: args.chatId ?? ""
   };
 
@@ -380,6 +386,20 @@ function updateEnv(text: string, updates: Record<string, string>): string {
   }
 
   return `${updated.join("\n").replace(/\n+$/, "")}\n`;
+}
+
+function readEnvValue(key: string): string {
+  const envPath = projectPath(".env");
+  const candidates = [
+    fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "",
+    fs.readFileSync(projectPath(".env.example"), "utf8")
+  ];
+
+  for (const text of candidates) {
+    const match = text.match(new RegExp(`^${key}=(.*)$`, "m"));
+    if (match?.[1]) return match[1].trim();
+  }
+  return "";
 }
 
 function ensureDirectory(relativePath: string): void {

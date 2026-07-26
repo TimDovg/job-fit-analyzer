@@ -17,11 +17,16 @@ async function main(): Promise<void> {
   console.log(`- browser profile: ${config.browserProfileDir}`);
   console.log(`- Djinni: ${config.sources.djinni.enabled ? config.sources.djinni.dashboardUrl : "disabled"}`);
   console.log(`- DOU: ${config.sources.dou.enabled ? config.sources.dou.listingUrl : "disabled"}`);
-  console.log(`- Telegram token: ${config.telegramBotToken ? "present" : "missing"}`);
+  console.log(`- notification webhook: ${config.notificationWebhookUrl || "missing"}`);
+  console.log(`- notification webhook auth: ${config.notificationWebhookSecret ? "enabled" : "disabled"}`);
+  console.log(`- Telegram token local fallback/relay: ${config.telegramBotToken ? "present" : "missing"}`);
   console.log(`- Telegram chat id: ${mask(config.telegramChatId)}`);
   console.log(`- skill files exist: ${skillFilesExist() ? "yes" : "no"}`);
 
-  if (config.telegramBotToken) {
+  if (config.notificationWebhookUrl) {
+    const response = await fetch(config.notificationWebhookUrl.replace(/\/telegram$/, "/health"));
+    console.log(`Notification relay health: ${response.status}`);
+  } else if (config.telegramBotToken) {
     const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/getUpdates`);
     console.log(`Telegram getUpdates: ${response.status}`);
     const body = await response.json().catch(() => undefined) as { ok?: boolean; result?: unknown[] } | undefined;

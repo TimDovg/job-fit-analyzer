@@ -46,7 +46,8 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - DOU category/listing URL;
    - score threshold and per-run limits;
    - `skill.dir`, `skill.resumeFile`, and `skill.profileFile` only if the candidate files are stored somewhere else.
-7. Ensure the candidate's `.env` contains `TELEGRAM_CHAT_ID`. The shared bot token should come from the project owner/Codex scheduled task environment, not from the candidate.
+7. Ensure the candidate's `.env` contains `TELEGRAM_CHAT_ID` and a non-secret `NOTIFICATION_WEBHOOK_URL`.
+   The shared `TELEGRAM_BOT_TOKEN` must live only on the private notification relay, never in candidate files.
 8. Run `npm run doctor`.
 9. Run `npm run login` so the user can authenticate Djinni in the Playwright browser profile.
 10. Create or update a Codex scheduled task using generated `codex-task-prompt.md`.
@@ -59,6 +60,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 - Keep `.env` for secrets and optional overrides only.
 - Keep `SKILL.md` generic; all candidate-specific scoring must live in `candidate-profile.md`.
 - Do not add a standalone local model/API analysis path; this project is intentionally Codex scheduled task only.
+- Do not put `TELEGRAM_BOT_TOKEN` in the public candidate project. Use the notification relay for shared-bot delivery.
 - If source sites change HTML, update the Codex automation prompt or source config, not candidate files.
 
 ## Public Export Checklist
@@ -72,6 +74,6 @@ Before publishing to GitHub:
 - Ensure `candidate/job-fit-analyzer/references/candidate-profile.md` is absent.
 - Ensure `data/`, `browser-profile/`, and `node_modules/` are absent.
 - Run `npm run build`.
-- Run `rg -n "Tymo[f]ii|Dov[h]opol|TELEGRAM_BOT_TOKEN=.+" . --glob '!node_modules/**' --glob '!data/**' --glob '!browser-profile/**'`.
+- Run `rg -n "Tymo[f]ii|Dov[h]opol|TELEGRAM_BOT_TOKEN[=].+|NOTIFICATION_WEBHOOK_SECRET[=].+" . --glob '!node_modules/**' --glob '!data/**' --glob '!browser-profile/**'`.
 - Run `rg -n "$HOME" . --glob '!node_modules/**' --glob '!data/**' --glob '!browser-profile/**'`.
 - Remove any private leftovers.
