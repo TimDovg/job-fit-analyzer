@@ -170,7 +170,7 @@ The repo includes `render.yaml` for Render Blueprint deployment.
 5. Put the relay endpoint into `.env.example`:
 
 ```env
-NOTIFICATION_WEBHOOK_URL=https://your-render-service.onrender.com/telegram
+NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram
 ```
 
 One-time owner setup:
@@ -181,7 +181,7 @@ One-time owner setup:
 4. Put the public relay endpoint into this repo's `.env.example`:
 
 ```env
-NOTIFICATION_WEBHOOK_URL=https://your-relay.example.com/telegram
+NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram
 ```
 
 Run this only in the private environment controlled by the shared bot owner:
@@ -200,7 +200,7 @@ The relay exposes:
 Candidate scheduled tasks send to `NOTIFICATION_WEBHOOK_URL`, for example:
 
 ```env
-NOTIFICATION_WEBHOOK_URL=https://your-relay.example.com/telegram
+NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram
 TELEGRAM_CHAT_ID=123456789
 ```
 
