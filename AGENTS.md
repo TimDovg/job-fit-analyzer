@@ -48,7 +48,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - `skill.dir`, `skill.resumeFile`, and `skill.profileFile` only if the candidate files are stored somewhere else.
 7. Ensure the candidate's `.env` contains `TELEGRAM_CHAT_ID` and a non-secret `NOTIFICATION_WEBHOOK_URL`.
    The shared `TELEGRAM_BOT_TOKEN` must live only on the private notification relay, never in candidate files.
-   Do not add relay-owner variables such as `TELEGRAM_BOT_TOKEN`, `NOTIFICATION_RELAY_SECRET`, or `NOTIFICATION_WEBHOOK_SECRET` to the candidate `.env.example`.
+   Do not add relay-owner variables such as `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `NOTIFICATION_RELAY_SECRET`, or `NOTIFICATION_WEBHOOK_SECRET` to the candidate `.env.example`.
 8. Run `npm run doctor`.
 9. Run `npm run login` so the user can authenticate Djinni in the Playwright browser profile.
 10. Create or update a Codex scheduled task using generated `codex-task-prompt.md`.

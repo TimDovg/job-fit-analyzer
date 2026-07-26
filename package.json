@@ -8,6 +8,7 @@
     "login": "tsx src/login.ts",
     "doctor": "tsx src/doctor.ts",
     "telegram:send": "tsx src/sendTelegram.ts",
+    "telegram:set-webhook": "tsx src/setTelegramWebhook.ts",
     "relay": "tsx src/notificationRelay.ts",
     "build": "tsc --noEmit",
     "install-browsers": "playwright install chromium"

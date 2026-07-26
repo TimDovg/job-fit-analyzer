@@ -95,6 +95,8 @@ export const config = {
   notificationWebhookSecret: process.env.NOTIFICATION_WEBHOOK_SECRET || "",
   notificationRelaySecret: process.env.NOTIFICATION_RELAY_SECRET || "",
   notificationRelayPort: numberFromEnv("NOTIFICATION_RELAY_PORT", numberFromEnv("PORT", 8787)),
+  telegramWebhookUrl: process.env.TELEGRAM_WEBHOOK_URL || "",
+  telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || "",
   minScore: numberFromEnv("MIN_SCORE", app.analysis.minScore),
   lookbackHours: numberFromEnv("LOOKBACK_HOURS", app.analysis.lookbackHours),
   maxVacanciesPerSource: numberFromEnv("MAX_VACANCIES_PER_SOURCE", app.analysis.maxVacanciesPerSource),

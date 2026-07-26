@@ -164,10 +164,23 @@ For the public candidate project, `npm run telegram:send` should use `NOTIFICATI
 The repo includes `render.yaml` for Render Blueprint deployment.
 
 1. In Render, create a new Blueprint from this GitHub repository.
-2. When Render asks for environment variables, set `TELEGRAM_BOT_TOKEN` to the shared bot token.
+2. When Render asks for environment variables, set:
+   - `TELEGRAM_BOT_TOKEN`: shared bot token from BotFather.
+   - `TELEGRAM_WEBHOOK_SECRET`: random secret used only by Telegram webhook requests.
 3. Deploy the service.
 4. Open `/health` on the deployed URL and expect `{"ok":true}`.
-5. Put the relay endpoint into `.env.example`:
+5. Register the bot webhook once:
+
+```bash
+TELEGRAM_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram/webhook \
+npm run telegram:set-webhook
+```
+
+Run this from a shell that already has `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` set locally. Do not commit those values.
+
+For an already deployed Render service, add `TELEGRAM_WEBHOOK_SECRET` manually in the service's Environment settings, then redeploy.
+
+6. Put the relay endpoint into `.env.example`:
 
 ```env
 NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram
@@ -196,6 +209,11 @@ The relay exposes:
 
 - `GET /health`
 - `POST /telegram`
+- `POST /telegram/webhook`
+
+`POST /telegram/webhook` is for Telegram itself. After webhook registration, `@job_fit_analyzer_bot` responds to `/start` with the user's chatId and the short setup instruction.
+
+Do not add `TELEGRAM_WEBHOOK_SECRET` to the candidate `.env.example`; it belongs only in Render and in the one-time webhook registration command.
 
 Candidate scheduled tasks send to `NOTIFICATION_WEBHOOK_URL`, for example:
 
