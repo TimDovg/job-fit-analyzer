@@ -208,7 +208,7 @@ async function linkTelegramChat(): Promise<string | undefined> {
     await delay(telegramSetupPollMs);
   }
 
-  console.log("Telegram auto-link timed out. You can still paste chatId manually.");
+  console.log("Telegram auto-link timed out. Send /start to @job_fit_analyzer_bot and paste chatId manually.");
   return undefined;
 }
 

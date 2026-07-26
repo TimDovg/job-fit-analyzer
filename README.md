@@ -25,7 +25,7 @@ The candidate is configured through files, not hardcoded in source code:
 - `config/job-watch.config.json` controls search sources, limits, score threshold, paths, and runtime behavior.
 - `candidate/job-fit-analyzer/references/resume.md` is the full factual CV.
 - `candidate/job-fit-analyzer/references/candidate-profile.md` is the positioning guide for scoring and application text.
-- `.env` contains the candidate chat id, the notification relay URL, and optional path/runtime overrides.
+- `.env` contains the auto-linked candidate chat id and the public notification relay URL.
 
 ## Quick Start
 
@@ -82,7 +82,9 @@ Setup flags:
 - `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
 
-## Configure A Candidate
+## Generated Candidate Files
+
+`npm run setup` creates candidate files from `example_resume.pdf`. You usually do not edit these before the first run.
 
 Use `resume.md` for facts:
 
@@ -103,11 +105,11 @@ Use `candidate-profile.md` for judgment and positioning:
 - application-answer defaults;
 - specific stories worth mentioning.
 
-The Codex task should treat `resume.md` as source of truth and `candidate-profile.md` as scoring/tone guidance.
+The Codex task should treat `resume.md` as source of truth and `candidate-profile.md` as scoring/tone guidance. Edit these files only when the PDF extraction missed something important or the candidate wants deliberate positioning changes.
 
 ## Main Config
 
-Edit `config/job-watch.config.json`.
+`npm run setup` creates `config/job-watch.config.json` automatically. Edit it only when the inferred defaults need deliberate tuning.
 
 Important fields:
 
@@ -123,7 +125,7 @@ Important fields:
 - `sources.dou.listingUrl`: DOU listing URL, including category query.
 - `telegram.enabled`: whether matching results should be sent through Telegram.
 
-Environment variables in `.env` override selected config values when set.
+Environment variables in `.env` override selected config values only for advanced local runs.
 
 ## Login
 
@@ -221,7 +223,7 @@ TELEGRAM_CHAT_ID=123456789
 
 Optional hardening for the relay owner only: set `NOTIFICATION_RELAY_SECRET` on the relay and `NOTIFICATION_WEBHOOK_SECRET` only in trusted sender environments. Do not put these in the candidate `.env.example`.
 
-If you want candidates to configure only `chatId`, deploy the relay with rate limiting/allowlisting and commit the non-secret `NOTIFICATION_WEBHOOK_URL` default into `.env.example`.
+For public usage, keep rate limiting/allowlisting on the relay side and commit only the non-secret `NOTIFICATION_WEBHOOK_URL` default into `.env.example`.
 
 ## Public Repo Notes
 
@@ -245,10 +247,10 @@ Do not commit:
 
 ## AI-Assisted Setup
 
-Give an AI assistant this repo plus the candidate resume and ask it to follow `AGENTS.md`. The intended flow is:
+Give an AI assistant this repo plus the candidate PDF resume and ask it to follow `AGENTS.md`. The intended flow is:
 
-1. Replace `example_resume.pdf` and run `npm run setup`.
-2. Polish `resume.md` and `candidate-profile.md`.
-3. Fill Telegram secrets in `.env` if needed.
+1. Replace `example_resume.pdf`.
+2. Run `npm run setup` and open the Telegram setup link.
+3. Review generated `resume.md`, `candidate-profile.md`, and config only for obvious extraction/inference issues.
 4. Run `npm run doctor` and `npm run login`.
 5. Create the Codex scheduled task from `codex-task-prompt.md`.

@@ -31,8 +31,8 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 1. Read the candidate resume or source materials supplied by the user.
 2. Ensure `example_resume.pdf` has been replaced with the candidate resume PDF. Do not ask for or use markdown/text resume inputs during setup.
 3. Run `npm run setup` and open the Telegram setup link when prompted. Setup should infer the candidate name and target category from the PDF resume. In non-interactive mode or fallback, pass `--chat-id`.
-4. Fill or polish `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
-5. Fill or polish `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
+4. Review `candidate/job-fit-analyzer/references/resume.md` for obvious PDF extraction issues. Do not rewrite it unless the extraction is incomplete or incorrect.
+5. Review `candidate/job-fit-analyzer/references/candidate-profile.md` for obvious inference issues. Edit it only when the generated profile needs deliberate positioning guidance:
    - target roles;
    - preferred domains and work format;
    - strongest technologies;
