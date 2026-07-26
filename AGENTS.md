@@ -29,8 +29,8 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 ## Candidate Configuration Workflow
 
 1. Read the candidate resume or source materials supplied by the user.
-2. Ensure `example_resume.pdf` has been replaced with the candidate resume PDF, or use `--resume /path/to/resume`.
-3. Run `npm run setup`, answer any interactive questions, and open the Telegram setup link when prompted. In non-interactive mode or fallback, pass `--chat-id`.
+2. Ensure `example_resume.pdf` has been replaced with the candidate resume PDF. Do not ask for or use markdown/text resume inputs during setup.
+3. Run `npm run setup` and open the Telegram setup link when prompted. Setup should infer the candidate name and target category from the PDF resume. In non-interactive mode or fallback, pass `--chat-id`.
 4. Fill or polish `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
 5. Fill or polish `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
    - target roles;
@@ -40,7 +40,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - things not to overclaim;
    - compensation, notice period, language level, relocation/office preferences;
    - strong project stories for application text.
-6. Update `config/job-watch.config.json` if the setup flags were not enough:
+6. Update `config/job-watch.config.json` only after setup if the generated defaults need deliberate tuning:
    - `candidate.displayName`;
    - `candidate.searchDescription`;
    - DOU category/listing URL;

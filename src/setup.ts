@@ -7,13 +7,6 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 type Args = {
-  name?: string;
-  resume?: string;
-  search?: string;
-  douCategory?: string;
-  douUrl?: string;
-  minScore?: number;
-  lookbackHours?: number;
   chatId?: string;
   telegram?: boolean;
   force: boolean;
@@ -39,6 +32,7 @@ type SetupInputs = Args & {
   name: string;
   resume: string;
   search: string;
+  douCategory: string;
   chatId?: string;
 };
 
@@ -49,7 +43,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const resume = await readResume(args.resume ?? defaultResumePath);
+  const resume = await readResume();
   const inputs = await collectInputs(args, resume);
 
   ensureDirectory("config");
@@ -124,27 +118,6 @@ function parseArgs(argv: string[]): Args {
     if (inlineValue === undefined) index += 1;
 
     switch (rawKey) {
-      case "name":
-        args.name = value;
-        break;
-      case "resume":
-        args.resume = value;
-        break;
-      case "search":
-        args.search = value;
-        break;
-      case "dou-category":
-        args.douCategory = value;
-        break;
-      case "dou-url":
-        args.douUrl = value;
-        break;
-      case "min-score":
-        args.minScore = parseNumber(value, "--min-score");
-        break;
-      case "lookback-hours":
-        args.lookbackHours = parseNumber(value, "--lookback-hours");
-        break;
       case "chat-id":
       case "telegram-chat-id":
         args.chatId = value;
@@ -159,9 +132,11 @@ function parseArgs(argv: string[]): Args {
 
 async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupInputs> {
   const inferredName = inferName(resume.text);
+  const inferredTarget = inferTarget(resume.text);
   const defaults = {
-    name: args.name ?? inferredName ?? "Configured Candidate",
-    search: args.search ?? "Front End vacancies",
+    name: inferredName ?? "Configured Candidate",
+    search: inferredTarget.searchDescription,
+    douCategory: inferredTarget.douCategory,
     chatId: args.chatId
   };
 
@@ -171,14 +146,15 @@ async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupIn
       name: defaults.name,
       resume: resume.sourcePath,
       search: defaults.search,
+      douCategory: defaults.douCategory,
       chatId: defaults.chatId
     };
   }
 
   const rl = createInterface({ input, output });
   try {
-    const name = args.name ?? await askWithDefault(rl, "Candidate name", defaults.name);
-    const search = args.search ?? await askWithDefault(rl, "Target roles / search description", defaults.search);
+    const name = defaults.name;
+    const search = defaults.search;
     let chatId = args.chatId;
     if (args.telegram !== false) {
       chatId = chatId ?? await linkTelegramChat();
@@ -192,6 +168,7 @@ async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupIn
       name,
       resume: resume.sourcePath,
       search,
+      douCategory: defaults.douCategory,
       chatId: chatId || undefined
     };
   } finally {
@@ -269,16 +246,9 @@ function writeConfig(args: SetupInputs): void {
 
   config.candidate.displayName = args.name ?? config.candidate.displayName;
   config.candidate.searchDescription = args.search ?? config.candidate.searchDescription;
-  config.analysis.minScore = args.minScore ?? config.analysis.minScore;
-  config.analysis.lookbackHours = args.lookbackHours ?? config.analysis.lookbackHours;
   config.telegram.enabled = args.telegram ?? config.telegram.enabled;
-
-  if (args.douUrl) {
-    config.sources.dou.listingUrl = args.douUrl;
-  } else if (args.douCategory) {
-    config.sources.dou.categoryName = args.douCategory;
-    config.sources.dou.listingUrl = `https://jobs.dou.ua/vacancies/?category=${encodeURIComponent(args.douCategory)}&from=maybe`;
-  }
+  config.sources.dou.categoryName = args.douCategory;
+  config.sources.dou.listingUrl = `https://jobs.dou.ua/vacancies/?category=${encodeURIComponent(args.douCategory)}&from=maybe`;
 
   writeJsonIfAllowed(configPath, config, args.force);
 }
@@ -469,42 +439,30 @@ function projectPath(relativePath: string): string {
   return path.resolve(rootDir, relativePath);
 }
 
-function parseNumber(value: string, label: string): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`${label} must be a number`);
-  }
-  return parsed;
-}
-
 function isExampleProfile(text: string): boolean {
   return text.includes("### Company / Project, dates") && text.includes("Name:  ");
 }
 
-async function readResume(rawPath: string): Promise<ResumeContent> {
-  const sourcePath = path.resolve(rawPath);
+async function readResume(): Promise<ResumeContent> {
+  const sourcePath = projectPath(defaultResumePath);
   if (!fs.existsSync(sourcePath)) {
-    throw new Error(`Resume file not found: ${sourcePath}. Replace ${defaultResumePath} with your resume PDF, or pass --resume /path/to/resume.md.`);
+    throw new Error(`Resume file not found: ${sourcePath}. Replace ${defaultResumePath} with your resume PDF.`);
   }
 
   const raw = fs.readFileSync(sourcePath);
   const sourceName = path.basename(sourcePath);
   const extension = path.extname(sourceName).toLowerCase();
 
-  if (extension === ".pdf") {
-    const text = await extractPdfText(raw);
-    return {
-      sourcePath,
-      sourceName,
-      text,
-      extractionNote: "Extracted automatically from PDF by npm run setup."
-    };
+  if (extension !== ".pdf") {
+    throw new Error(`Resume must be a PDF file named ${defaultResumePath}.`);
   }
 
+  const text = await extractPdfText(raw);
   return {
     sourcePath,
     sourceName,
-    text: raw.toString("utf8")
+    text,
+    extractionNote: "Extracted automatically from PDF by npm run setup."
   };
 }
 
@@ -513,16 +471,54 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   const result = await pdfParse(buffer);
   const text = normalizeResumeText(result.text ?? "");
   if (!text) {
-    throw new Error("Could not extract text from example_resume.pdf. Try exporting the resume as text/markdown and pass --resume ./resume.md.");
+    throw new Error("Could not extract text from example_resume.pdf. Use a text-based PDF resume.");
   }
   return text;
 }
 
 function inferName(text: string): string | undefined {
-  return text
+  const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .find((line) => /^[A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,3}$/.test(line));
+    .filter(Boolean);
+
+  return lines.find((line) => /^[\p{Lu}][\p{L}'.-]+(?:\s+[\p{Lu}][\p{L}'.-]+){1,3}$/u.test(line))
+    ?? lines.find((line) => line.length <= 80 && !/[0-9@:/]/.test(line) && /\s/.test(line));
+}
+
+function inferTarget(text: string): { searchDescription: string; douCategory: string } {
+  const lower = text.toLowerCase();
+  const has = (pattern: RegExp) => pattern.test(lower);
+
+  if (has(/devops|site reliability|sre|kubernetes|terraform/)) {
+    return { searchDescription: "DevOps vacancies", douCategory: "DevOps" };
+  }
+  if (has(/data scientist|machine learning|\bml\b|data engineer|pandas|tensorflow|pytorch/)) {
+    return { searchDescription: "Data Science vacancies", douCategory: "Data Science" };
+  }
+  if (has(/react|vue|angular|frontend|front-end|front end/)) {
+    return { searchDescription: "Front End vacancies", douCategory: "Front End" };
+  }
+  if (has(/\bqa\b|quality assurance|test automation|qa automation|test engineer/)) {
+    return { searchDescription: "QA vacancies", douCategory: "QA" };
+  }
+  if (has(/node\.?js|nestjs|express/) && has(/backend|back-end|full[-\s]?stack|api/)) {
+    return { searchDescription: "Node.js vacancies", douCategory: "Node.js" };
+  }
+  if (has(/\.net|c#|asp\.net/)) {
+    return { searchDescription: ".NET vacancies", douCategory: ".NET" };
+  }
+  if (has(/\bjava\b|spring boot|spring framework/)) {
+    return { searchDescription: "Java vacancies", douCategory: "Java" };
+  }
+  if (has(/\bpython\b|django|fastapi|flask/)) {
+    return { searchDescription: "Python vacancies", douCategory: "Python" };
+  }
+  if (has(/\bphp\b|laravel|symfony/)) {
+    return { searchDescription: "PHP vacancies", douCategory: "PHP" };
+  }
+
+  return { searchDescription: "Software development vacancies", douCategory: "Front End" };
 }
 
 function detectKeywords(text: string): string[] {
@@ -575,13 +571,6 @@ function printHelp(): void {
   npm run setup -- --chat-id 123456789
 
 Options:
-  --name <name>              Candidate display name
-  --resume <path>            Resume PDF, markdown, or text file. Defaults to ./example_resume.pdf
-  --search <description>     Search/target role description
-  --dou-category <category>  DOU category, e.g. "Front End"
-  --dou-url <url>            Exact DOU listing URL
-  --min-score <number>       Telegram reporting threshold
-  --lookback-hours <number>  Vacancy freshness window
   --chat-id <id>             Manual Telegram chatId fallback
   --telegram / --no-telegram Enable or disable Telegram reporting
   --force                    Overwrite existing local config/resume/profile files

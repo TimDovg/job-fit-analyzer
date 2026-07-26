@@ -66,7 +66,7 @@ Default happy path:
 2. Run `npm run setup`.
 3. Open the Telegram setup link shown in the terminal.
 
-`npm run setup` will extract the resume, open a one-time Telegram linking flow through `@job_fit_analyzer_bot`, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
+`npm run setup` only reads `example_resume.pdf`. It extracts the resume, infers the candidate name and target category, opens a one-time Telegram linking flow through `@job_fit_analyzer_bot`, creates local config/profile files, and generates `codex-task-prompt.md`.
 
 For this to stay a no-copy chatId flow, the repo owner should deploy the private notification relay with Render Key Value and put its public, non-secret `/telegram` URL into `.env.example` as `NOTIFICATION_WEBHOOK_URL`.
 
@@ -76,15 +76,8 @@ For non-interactive setup or fallback, pass the chat id directly:
 npm run setup -- --chat-id 123456789
 ```
 
-Useful setup flags:
+Setup flags:
 
-- `--name`: candidate display name.
-- `--resume`: resume PDF, markdown, or text path. Defaults to `./example_resume.pdf`.
-- `--search`: target role description used in config and profile scaffold.
-- `--dou-category`: DOU category name.
-- `--dou-url`: exact DOU listing URL if category is not enough.
-- `--min-score`: reporting threshold.
-- `--lookback-hours`: vacancy freshness window.
 - `--chat-id`: manual Telegram chatId fallback.
 - `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
