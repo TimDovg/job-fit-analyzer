@@ -14,13 +14,13 @@ Prefer the one-command setup path:
 npm run setup
 ```
 
-Before setup, the user should replace `example_resume.pdf` with the candidate resume PDF and get their Telegram chatId from `@job_fit_analyzer_bot`.
+Before setup, the user should replace `example_resume.pdf` with the candidate resume PDF. `npm run setup` will generate a one-time `@job_fit_analyzer_bot` link and auto-fill `TELEGRAM_CHAT_ID`.
 
 The human-facing setup contract is:
 
 1. Replace `example_resume.pdf`.
-2. Get chatId from `@job_fit_analyzer_bot`.
-3. Run `npm run setup`.
+2. Run `npm run setup`.
+3. Open the Telegram setup link shown in the terminal.
 
 Use `--force` only when the user explicitly wants to overwrite existing local candidate files.
 
@@ -30,7 +30,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 
 1. Read the candidate resume or source materials supplied by the user.
 2. Ensure `example_resume.pdf` has been replaced with the candidate resume PDF, or use `--resume /path/to/resume`.
-3. Run `npm run setup` and answer any interactive questions, including Telegram chatId. In non-interactive mode, pass `--chat-id`.
+3. Run `npm run setup`, answer any interactive questions, and open the Telegram setup link when prompted. In non-interactive mode or fallback, pass `--chat-id`.
 4. Fill or polish `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
 5. Fill or polish `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
    - target roles;
@@ -46,7 +46,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - DOU category/listing URL;
    - score threshold and per-run limits;
    - `skill.dir`, `skill.resumeFile`, and `skill.profileFile` only if the candidate files are stored somewhere else.
-7. Ensure the candidate's `.env` contains `TELEGRAM_CHAT_ID` and a non-secret `NOTIFICATION_WEBHOOK_URL`.
+7. Ensure the candidate's `.env` contains the auto-linked `TELEGRAM_CHAT_ID` and a non-secret `NOTIFICATION_WEBHOOK_URL`.
    The shared `TELEGRAM_BOT_TOKEN` must live only on the private notification relay, never in candidate files.
    Do not add relay-owner variables such as `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `NOTIFICATION_RELAY_SECRET`, or `NOTIFICATION_WEBHOOK_SECRET` to the candidate `.env.example`.
 8. Run `npm run doctor`.

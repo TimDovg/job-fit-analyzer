@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -23,6 +24,9 @@ const rootDir = process.cwd();
 const require = createRequire(import.meta.url);
 const defaultResumePath = "example_resume.pdf";
 const generatedPromptPath = "codex-task-prompt.md";
+const telegramBotUsername = "job_fit_analyzer_bot";
+const telegramSetupPollMs = 2000;
+const telegramSetupTimeoutMs = 5 * 60 * 1000;
 
 type ResumeContent = {
   sourcePath: string;
@@ -177,7 +181,10 @@ async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupIn
     const search = args.search ?? await askWithDefault(rl, "Target roles / search description", defaults.search);
     let chatId = args.chatId;
     if (args.telegram !== false) {
-      chatId = await askWithDefault(rl, "Telegram chatId from @job_fit_analyzer_bot", defaults.chatId ?? "");
+      chatId = chatId ?? await linkTelegramChat();
+      if (!chatId) {
+        chatId = await askWithDefault(rl, "Telegram chatId from @job_fit_analyzer_bot", defaults.chatId ?? "");
+      }
     }
 
     return {
@@ -196,6 +203,58 @@ async function askWithDefault(rl: ReturnType<typeof createInterface>, label: str
   const suffix = fallback ? ` [${fallback}]` : "";
   const answer = await rl.question(`${label}${suffix}: `);
   return answer.trim() || fallback;
+}
+
+async function linkTelegramChat(): Promise<string | undefined> {
+  const notificationWebhookUrl = readEnvValue("NOTIFICATION_WEBHOOK_URL");
+  const statusUrl = buildSetupStatusUrl(notificationWebhookUrl);
+  if (!statusUrl) return undefined;
+
+  const token = crypto.randomBytes(16).toString("hex");
+  const setupLink = `https://t.me/${telegramBotUsername}?start=${token}`;
+  const tokenStatusUrl = `${statusUrl}/${token}`;
+
+  console.log("");
+  console.log("Telegram setup:");
+  console.log(`1. Open: ${setupLink}`);
+  console.log("2. Press Start in Telegram.");
+  console.log("3. Keep this terminal open; setup will continue automatically.");
+  console.log("");
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < telegramSetupTimeoutMs) {
+    const chatId = await fetchSetupChatId(tokenStatusUrl);
+    if (chatId) {
+      console.log(`Telegram connected: ${maskChatId(chatId)}`);
+      return chatId;
+    }
+    await delay(telegramSetupPollMs);
+  }
+
+  console.log("Telegram auto-link timed out. You can still paste chatId manually.");
+  return undefined;
+}
+
+async function fetchSetupChatId(statusUrl: string): Promise<string | undefined> {
+  const response = await fetch(statusUrl).catch(() => undefined);
+  if (!response?.ok) return undefined;
+  const body = await response.json().catch(() => undefined) as { pending?: boolean; chatId?: string } | undefined;
+  if (body?.pending === false && body.chatId) return `${body.chatId}`;
+  return undefined;
+}
+
+function buildSetupStatusUrl(notificationWebhookUrl: string): string {
+  if (!notificationWebhookUrl) return "";
+  return notificationWebhookUrl.replace(/\/telegram\/?$/, "/setup");
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function maskChatId(chatId: string): string {
+  if (chatId.length <= 4) return "present";
+  return `${chatId.slice(0, 2)}...${chatId.slice(-2)}`;
 }
 
 function writeConfig(args: SetupInputs): void {
@@ -523,7 +582,7 @@ Options:
   --dou-url <url>            Exact DOU listing URL
   --min-score <number>       Telegram reporting threshold
   --lookback-hours <number>  Vacancy freshness window
-  --chat-id <id>             Telegram chatId from @job_fit_analyzer_bot
+  --chat-id <id>             Manual Telegram chatId fallback
   --telegram / --no-telegram Enable or disable Telegram reporting
   --force                    Overwrite existing local config/resume/profile files
 `);

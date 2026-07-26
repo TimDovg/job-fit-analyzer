@@ -1,7 +1,10 @@
 import http from "node:http";
+import { Redis } from "ioredis";
 import { config } from "./config.js";
 
 const maxBodyBytes = 128 * 1024;
+const setupTokenTtlSeconds = 15 * 60;
+let redis: Redis | undefined;
 
 type RelayPayload = {
   chatId?: string;
@@ -42,6 +45,11 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
   try {
     if (request.method === "GET" && request.url === "/health") {
       writeJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === "GET" && getPathname(request).startsWith("/setup/")) {
+      await handleSetupStatus(request, response);
       return;
     }
 
@@ -107,6 +115,19 @@ async function handleTelegramWebhook(request: http.IncomingMessage, response: ht
 
   const text = update.message?.text?.trim() ?? "";
   if (text.startsWith("/start")) {
+    const setupToken = parseStartToken(text);
+    if (setupToken) {
+      await saveSetupChat(setupToken, `${chatId}`);
+      await sendTelegramMessage({
+        chatId: `${chatId}`,
+        text: buildLinkedStartMessage(`${chatId}`, update.message?.from?.first_name),
+        parseMode: "HTML",
+        disableWebPagePreview: true
+      });
+      writeJson(response, 200, { ok: true, linked: true });
+      return;
+    }
+
     await sendTelegramMessage({
       chatId: `${chatId}`,
       text: buildStartMessage(`${chatId}`, update.message?.from?.first_name),
@@ -124,6 +145,30 @@ async function handleTelegramWebhook(request: http.IncomingMessage, response: ht
     disableWebPagePreview: true
   });
   writeJson(response, 200, { ok: true });
+}
+
+async function handleSetupStatus(request: http.IncomingMessage, response: http.ServerResponse): Promise<void> {
+  const token = decodeURIComponent(getPathname(request).replace(/^\/setup\//, "")).trim();
+  if (!isValidSetupToken(token)) {
+    writeJson(response, 400, { ok: false, error: "invalid_setup_token" });
+    return;
+  }
+
+  const client = getRedis();
+  const raw = await client.get(setupKey(token));
+  if (!raw) {
+    writeJson(response, 200, { ok: true, pending: true });
+    return;
+  }
+
+  const payload = JSON.parse(raw) as { chatId?: string };
+  writeJson(response, 200, { ok: true, pending: false, chatId: payload.chatId ?? "" });
+}
+
+async function saveSetupChat(token: string, chatId: string): Promise<void> {
+  if (!isValidSetupToken(token)) return;
+  const client = getRedis();
+  await client.setex(setupKey(token), setupTokenTtlSeconds, JSON.stringify({ chatId, linkedAt: new Date().toISOString() }));
 }
 
 async function sendTelegramMessage(args: {
@@ -156,12 +201,44 @@ function buildStartMessage(chatId: string, firstName: string | undefined): strin
     `Твой chatId: <code>${escapeHtml(chatId)}</code>`,
     "",
     "Как настроить проект:",
-    "1. Скопируй этот chatId.",
-    "2. Замени <code>example_resume.pdf</code> своим резюме.",
-    "3. Запусти <code>npm run setup</code> и вставь chatId, когда попросят.",
+    "1. Замени <code>example_resume.pdf</code> своим резюме.",
+    "2. Запусти <code>npm run setup</code>.",
+    "3. Открой ссылку, которую setup покажет в терминале.",
     "",
     "После настройки Codex scheduled task будет присылать сюда подходящие вакансии."
   ].join("\n");
+}
+
+function buildLinkedStartMessage(chatId: string, firstName: string | undefined): string {
+  const greeting = firstName ? `Привет, ${escapeHtml(firstName)}!` : "Привет!";
+  return [
+    `${greeting} Telegram подключен к <b>Job Fit Analyzer</b>.`,
+    "",
+    `Твой chatId: <code>${escapeHtml(chatId)}</code>`,
+    "",
+    "Вернись в терминал: <code>npm run setup</code> продолжит настройку автоматически."
+  ].join("\n");
+}
+
+function parseStartToken(text: string): string {
+  const [, token = ""] = text.split(/\s+/, 2);
+  return token.trim();
+}
+
+function getRedis(): Redis {
+  if (!config.redisUrl) {
+    throw new Error("REDIS_URL is required for Telegram setup linking.");
+  }
+  redis ??= new Redis(config.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 2 });
+  return redis;
+}
+
+function setupKey(token: string): string {
+  return `setup:${token}`;
+}
+
+function isValidSetupToken(token: string): boolean {
+  return /^[a-f0-9]{32}$/i.test(token);
 }
 
 async function readJsonBody<T>(request: http.IncomingMessage): Promise<T> {

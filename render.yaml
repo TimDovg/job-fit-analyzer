@@ -1,4 +1,9 @@
 services:
+  - type: keyvalue
+    name: job-fit-setup-links
+    plan: free
+    ipAllowList: []
+
   - type: web
     name: job-fit-notification-relay
     runtime: node
@@ -11,3 +16,8 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: job-fit-setup-links
+          property: connectionString

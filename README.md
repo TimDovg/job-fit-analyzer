@@ -17,6 +17,7 @@ Codex scheduled task
   -> uses npm run telegram:send for Telegram delivery
   -> telegram:send calls a private notification relay
   -> relay holds TELEGRAM_BOT_TOKEN and calls Telegram Bot API
+  -> relay stores one-time Telegram setup links in Render Key Value
 ```
 
 The candidate is configured through files, not hardcoded in source code:
@@ -28,11 +29,11 @@ The candidate is configured through files, not hardcoded in source code:
 
 ## Quick Start
 
-Human setup is intentionally only three steps:
+Human setup is intentionally small:
 
 1. Replace `example_resume.pdf` with your own resume PDF.
-2. Get your Telegram `chatId` from `@job_fit_analyzer_bot`.
-3. Run `npm run setup`.
+2. Run `npm run setup`.
+3. Open the Telegram link shown by setup and press Start.
 
 ```bash
 npm install
@@ -42,7 +43,7 @@ npm run setup
 
 The setup command creates local, gitignored files:
 
-- `.env` with your `TELEGRAM_CHAT_ID`
+- `.env` with your auto-linked `TELEGRAM_CHAT_ID`
 - `config/job-watch.config.json`
 - `candidate/job-fit-analyzer/references/resume.md`
 - `candidate/job-fit-analyzer/references/candidate-profile.md`
@@ -62,14 +63,14 @@ Finally, create a Codex scheduled task using the generated `codex-task-prompt.md
 Default happy path:
 
 1. Replace `example_resume.pdf` with the candidate resume PDF.
-2. Get the candidate's Telegram `chatId` from `@job_fit_analyzer_bot`.
-3. Run `npm run setup`.
+2. Run `npm run setup`.
+3. Open the Telegram setup link shown in the terminal.
 
-`npm run setup` will extract the resume, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
+`npm run setup` will extract the resume, open a one-time Telegram linking flow through `@job_fit_analyzer_bot`, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
 
-For this to stay a three-step candidate flow, the repo owner should first deploy the private notification relay and put its public, non-secret `/telegram` URL into `.env.example` as `NOTIFICATION_WEBHOOK_URL`.
+For this to stay a no-copy chatId flow, the repo owner should deploy the private notification relay with Render Key Value and put its public, non-secret `/telegram` URL into `.env.example` as `NOTIFICATION_WEBHOOK_URL`.
 
-For non-interactive setup, pass the chat id directly:
+For non-interactive setup or fallback, pass the chat id directly:
 
 ```bash
 npm run setup -- --chat-id 123456789
@@ -84,7 +85,7 @@ Useful setup flags:
 - `--dou-url`: exact DOU listing URL if category is not enough.
 - `--min-score`: reporting threshold.
 - `--lookback-hours`: vacancy freshness window.
-- `--chat-id`: Telegram chatId from `@job_fit_analyzer_bot`.
+- `--chat-id`: manual Telegram chatId fallback.
 - `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
 
@@ -167,7 +168,7 @@ The repo includes `render.yaml` for Render Blueprint deployment.
 2. When Render asks for environment variables, set:
    - `TELEGRAM_BOT_TOKEN`: shared bot token from BotFather.
    - `TELEGRAM_WEBHOOK_SECRET`: random secret used only by Telegram webhook requests.
-3. Deploy the service.
+3. Deploy the service and the `job-fit-setup-links` Key Value instance from `render.yaml`.
 4. Open `/health` on the deployed URL and expect `{"ok":true}`.
 5. Register the bot webhook once:
 
@@ -179,6 +180,8 @@ npm run telegram:set-webhook
 Run this from a shell that already has `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` set locally. Do not commit those values.
 
 For an already deployed Render service, add `TELEGRAM_WEBHOOK_SECRET` manually in the service's Environment settings, then redeploy.
+
+For an already deployed Blueprint, sync the Blueprint so Render creates `job-fit-setup-links` and wires `REDIS_URL` into the relay service. If you do not use Blueprint sync, create a Render Key Value instance manually and add its internal connection string to the relay service as `REDIS_URL`.
 
 6. Put the relay endpoint into `.env.example`:
 
@@ -208,14 +211,15 @@ Set `TELEGRAM_BOT_TOKEN` in the deployment platform's private environment before
 The relay exposes:
 
 - `GET /health`
+- `GET /setup/:token`
 - `POST /telegram`
 - `POST /telegram/webhook`
 
-`POST /telegram/webhook` is for Telegram itself. After webhook registration, `@job_fit_analyzer_bot` responds to `/start` with the user's chatId and the short setup instruction.
+`GET /setup/:token` is used by `npm run setup` while it waits for Telegram linking. `POST /telegram/webhook` is for Telegram itself. After webhook registration, `@job_fit_analyzer_bot` responds to `/start` with the user's chatId and to `/start <setup-token>` by linking Telegram automatically to the setup process.
 
 Do not add `TELEGRAM_WEBHOOK_SECRET` to the candidate `.env.example`; it belongs only in Render and in the one-time webhook registration command.
 
-Candidate scheduled tasks send to `NOTIFICATION_WEBHOOK_URL`, for example:
+Candidate setup stores the linked chat id in `.env`, then scheduled tasks send to `NOTIFICATION_WEBHOOK_URL`, for example:
 
 ```env
 NOTIFICATION_WEBHOOK_URL=https://job-fit-notification-relay.onrender.com/telegram
