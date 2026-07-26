@@ -14,11 +14,9 @@ const appConfigSchema = z.object({
     searchDescription: z.string().min(1).default("Front End vacancies")
   }).default({}),
   analysis: z.object({
-    openaiModel: z.string().min(1).default("gpt-4.1-mini"),
     minScore: z.number().min(0).max(10).default(5),
     lookbackHours: z.number().positive().default(24),
-    maxVacanciesPerSource: z.number().int().positive().default(20),
-    maxAnalysesPerRun: z.number().int().positive().default(5)
+    maxVacanciesPerSource: z.number().int().positive().default(20)
   }).default({}),
   runtime: z.object({
     headless: z.boolean().default(true),
@@ -83,10 +81,6 @@ function resolvePath(raw: string | undefined, fallback: string): string {
   return path.resolve(rootDir, raw || fallback);
 }
 
-function envString(name: string, fallback: string): string {
-  return process.env[name] || fallback;
-}
-
 const loaded = readAppConfig();
 const app = loaded.config;
 
@@ -95,14 +89,11 @@ export const config = {
   candidate: app.candidate,
   sources: app.sources,
   telegram: app.telegram,
-  openaiApiKey: process.env.OPENAI_API_KEY || "",
-  openaiModel: envString("OPENAI_MODEL", app.analysis.openaiModel),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || "",
   telegramChatId: process.env.TELEGRAM_CHAT_ID || "",
   minScore: numberFromEnv("MIN_SCORE", app.analysis.minScore),
   lookbackHours: numberFromEnv("LOOKBACK_HOURS", app.analysis.lookbackHours),
   maxVacanciesPerSource: numberFromEnv("MAX_VACANCIES_PER_SOURCE", app.analysis.maxVacanciesPerSource),
-  maxAnalysesPerRun: numberFromEnv("MAX_ANALYSES_PER_RUN", app.analysis.maxAnalysesPerRun),
   headless: booleanFromEnv("HEADLESS", app.runtime.headless),
   dataDir: resolvePath(process.env.DATA_DIR, app.runtime.dataDir),
   browserProfileDir: resolvePath(process.env.BROWSER_PROFILE_DIR, app.runtime.browserProfileDir),

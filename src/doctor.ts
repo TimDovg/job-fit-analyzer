@@ -7,7 +7,6 @@ async function main(): Promise<void> {
   console.log(`- config file: ${config.configPath}`);
   console.log(`- candidate: ${config.candidate.displayName}`);
   console.log(`- search: ${config.candidate.searchDescription}`);
-  console.log(`- model: ${config.openaiModel}`);
   console.log(`- min score: ${config.minScore}`);
   console.log(`- lookback hours: ${config.lookbackHours}`);
   console.log(`- skill dir: ${config.skill.dir}`);
@@ -18,7 +17,6 @@ async function main(): Promise<void> {
   console.log(`- browser profile: ${config.browserProfileDir}`);
   console.log(`- Djinni: ${config.sources.djinni.enabled ? config.sources.djinni.dashboardUrl : "disabled"}`);
   console.log(`- DOU: ${config.sources.dou.enabled ? config.sources.dou.listingUrl : "disabled"}`);
-  console.log(`- OpenAI key: ${config.openaiApiKey ? "present" : "missing"}`);
   console.log(`- Telegram token: ${config.telegramBotToken ? "present" : "missing"}`);
   console.log(`- Telegram chat id: ${mask(config.telegramChatId)}`);
   console.log(`- skill files exist: ${skillFilesExist() ? "yes" : "no"}`);

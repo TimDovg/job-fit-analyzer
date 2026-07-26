@@ -4,11 +4,9 @@
     "searchDescription": "Front End vacancies"
   },
   "analysis": {
-    "openaiModel": "gpt-4.1-mini",
     "minScore": 5,
     "lookbackHours": 24,
-    "maxVacanciesPerSource": 20,
-    "maxAnalysesPerRun": 5
+    "maxVacanciesPerSource": 20
   },
   "runtime": {
     "headless": true,

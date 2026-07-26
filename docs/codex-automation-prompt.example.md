@@ -1,6 +1,6 @@
 # Codex Automation Prompt Template
 
-Use this prompt when creating a Codex scheduled task that should use the current Codex model instead of the local `npm run check` OpenAI API path.
+Use this prompt when creating a Codex scheduled task. The current Codex model performs the vacancy analysis; this project only provides configuration, candidate references, browser login state, and Telegram delivery.
 
 Replace placeholders before creating the automation:
 
@@ -11,10 +11,9 @@ Replace placeholders before creating the automation:
 - `{{STATE_PATH}}`
 
 ```text
-Every scheduled run, check recent {{SEARCH_DESCRIPTION}} for {{CANDIDATE_NAME}} and analyze them without using the local job-watch-agent OpenAI API script.
+Every scheduled run, check recent {{SEARCH_DESCRIPTION}} for {{CANDIDATE_NAME}} and analyze them with the current Codex model.
 
 Important constraints:
-- Do not run `npm run check` from `{{PROJECT_DIR}}`; that script uses OpenAI API billing.
 - Use the current ChatGPT/Codex model for analysis.
 - Use the `$job-fit-analyzer` skill at `{{SKILL_PATH}}`.
 - Follow the skill's scoring guide and configured analysis format.

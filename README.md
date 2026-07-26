@@ -1,13 +1,20 @@
-# Job Watch Agent
+# Job Fit Analyzer
 
-Candidate-agnostic vacancy watcher for Djinni and DOU.
+Codex-first vacancy watcher for Djinni and DOU.
 
-The project collects recent vacancies, analyzes each vacancy against a configured candidate resume/profile, stores analyzed URLs to avoid duplicates, and sends matching results to Telegram.
+This project is a reusable setup package for a Codex scheduled task. Codex does the vacancy collection and analysis with the current Codex/ChatGPT model; this repo provides the candidate configuration, job-fit skill, browser login profile, state conventions, and Telegram sender.
 
 ## Architecture
 
 ```text
-Playwright collectors -> vacancy details -> job-fit analyzer prompt -> OpenAI analysis -> local store -> Telegram
+Codex scheduled task
+  -> reads config/job-watch.config.json
+  -> opens Djinni/DOU with Playwright/browser profile when needed
+  -> reads candidate/job-fit-analyzer/SKILL.md
+  -> reads resume.md + candidate-profile.md
+  -> analyzes vacancies with the current Codex model
+  -> writes report text
+  -> uses npm run telegram:send for Telegram delivery
 ```
 
 The candidate is configured through files, not hardcoded in source code:
@@ -15,7 +22,7 @@ The candidate is configured through files, not hardcoded in source code:
 - `config/job-watch.config.json` controls search sources, limits, score threshold, paths, and runtime behavior.
 - `candidate/job-fit-analyzer/references/resume.md` is the full factual CV.
 - `candidate/job-fit-analyzer/references/candidate-profile.md` is the positioning guide for scoring and application text.
-- `.env` contains only secrets and optional environment overrides.
+- `.env` contains Telegram secrets and optional path/runtime overrides.
 
 ## Quick Start
 
@@ -32,25 +39,23 @@ The setup command creates local, gitignored files:
 - `candidate/job-fit-analyzer/references/resume.md`
 - `candidate/job-fit-analyzer/references/candidate-profile.md`
 
-Fill `.env` secrets:
+Fill `.env` only if Telegram reporting is enabled:
 
 ```bash
-OPENAI_API_KEY=...
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 ```
 
-Run:
+Then run:
 
 ```bash
 npm run doctor
 npm run login
-npm run check
 ```
 
-## Configure A Candidate
+Finally, create a Codex scheduled task using `docs/codex-automation-prompt.example.md`.
 
-The easiest path is:
+## One-Command Candidate Setup
 
 ```bash
 npm run setup -- --name "Jane Doe" --resume ./jane-resume.md --search "Senior Frontend / Full-stack TypeScript roles" --dou-category "Front End" --min-score 6
@@ -63,12 +68,12 @@ Useful setup flags:
 - `--search`: target role description used in config and profile scaffold.
 - `--dou-category`: DOU category name.
 - `--dou-url`: exact DOU listing URL if category is not enough.
-- `--min-score`: Telegram reporting threshold.
+- `--min-score`: reporting threshold.
 - `--lookback-hours`: vacancy freshness window.
-- `--max-analyses`: OpenAI spending guardrail per run.
-- `--model`: OpenAI model for the local `npm run check` path.
-- `--no-telegram`: keep reports in logs only.
+- `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
+
+## Configure A Candidate
 
 Use `resume.md` for facts:
 
@@ -89,7 +94,7 @@ Use `candidate-profile.md` for judgment and positioning:
 - application-answer defaults;
 - specific stories worth mentioning.
 
-The analyzer treats `resume.md` as source of truth and `candidate-profile.md` as scoring/tone guidance.
+The Codex task should treat `resume.md` as source of truth and `candidate-profile.md` as scoring/tone guidance.
 
 ## Main Config
 
@@ -99,16 +104,15 @@ Important fields:
 
 - `candidate.displayName`: candidate name for logs and prompts.
 - `candidate.searchDescription`: human label for the monitored search.
-- `analysis.minScore`: Telegram reporting threshold.
+- `analysis.minScore`: reporting threshold.
 - `analysis.lookbackHours`: only collect recently published vacancies.
 - `analysis.maxVacanciesPerSource`: collection cap per source.
-- `analysis.maxAnalysesPerRun`: OpenAI API spending guardrail.
-- `skill.dir`: analyzer prompt directory.
+- `skill.dir`: analyzer skill directory.
 - `skill.resumeFile`: resume path relative to `skill.dir`.
 - `skill.profileFile`: candidate profile path relative to `skill.dir`.
 - `sources.djinni.dashboardUrl`: Djinni dashboard URL.
 - `sources.dou.listingUrl`: DOU listing URL, including category query.
-- `telegram.enabled`: whether matching results should be sent.
+- `telegram.enabled`: whether matching results should be sent through Telegram.
 
 Environment variables in `.env` override selected config values when set.
 
@@ -124,21 +128,7 @@ Log in to Djinni in the opened browser window. DOU is public, but the login comm
 
 The browser session is stored in `browser-profile/`, which is ignored by git.
 
-## Manual Check
-
-```bash
-npm run check
-```
-
-Every run:
-
-1. Opens configured Djinni and DOU pages with a persistent Playwright browser profile.
-2. Collects vacancies published within `analysis.lookbackHours`.
-3. Skips vacancies already analyzed with the same content hash.
-4. Analyzes up to `analysis.maxAnalysesPerRun` vacancies against the configured resume/profile.
-5. Sends Telegram messages only for vacancies with score `analysis.minScore` or higher.
-
-## Send A Prepared Telegram Message
+## Telegram Sender
 
 This command only sends a text file through the Telegram bot. It does not call OpenAI.
 
@@ -146,21 +136,7 @@ This command only sends a text file through the Telegram bot. It does not call O
 npm run telegram:send -- /tmp/vacancy-report.txt
 ```
 
-## macOS launchd
-
-```bash
-chmod +x scripts/install-launchd.sh
-./scripts/install-launchd.sh
-```
-
-The install script writes an absolute-path launchd plist from `config/com.openai.job-watch-agent.plist.example`.
-
-Logs are written to:
-
-```text
-data/launchd.out.log
-data/launchd.err.log
-```
+The Codex scheduled task prompt uses this command after it has already produced the final report text.
 
 ## Public Repo Notes
 
@@ -188,7 +164,6 @@ Give an AI assistant this repo plus the candidate resume and ask it to follow `A
 
 1. Run `npm run setup -- --name "..." --resume ./resume.md --search "..."`.
 2. Polish `resume.md` and `candidate-profile.md`.
-3. Fill `.env` placeholders manually for secrets.
-4. Run `npm run doctor`, `npm run login`, and `npm run check`.
-
-For Codex scheduled tasks that should use the current Codex model instead of the local OpenAI API path, use `docs/codex-automation-prompt.example.md`.
+3. Fill Telegram secrets in `.env` if needed.
+4. Run `npm run doctor` and `npm run login`.
+5. Create the Codex scheduled task from `docs/codex-automation-prompt.example.md`.

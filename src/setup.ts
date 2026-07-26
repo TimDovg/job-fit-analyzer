@@ -10,8 +10,6 @@ type Args = {
   douUrl?: string;
   minScore?: number;
   lookbackHours?: number;
-  maxAnalysesPerRun?: number;
-  model?: string;
   telegram?: boolean;
   force: boolean;
   help: boolean;
@@ -50,11 +48,11 @@ async function main(): Promise<void> {
   console.log("- candidate/job-fit-analyzer/references/candidate-profile.md");
   console.log("");
   console.log("Next:");
-  console.log("1. Fill secrets in .env: OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.");
+  console.log("1. Fill Telegram secrets in .env if Telegram is enabled: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.");
   console.log("2. Ask your AI assistant to polish resume.md and candidate-profile.md from the candidate CV.");
   console.log("3. Run: npm run doctor");
   console.log("4. Run: npm run login");
-  console.log("5. Run: npm run check");
+  console.log("5. Create a Codex scheduled task using docs/codex-automation-prompt.example.md.");
 }
 
 function parseArgs(argv: string[]): Args {
@@ -113,12 +111,6 @@ function parseArgs(argv: string[]): Args {
       case "lookback-hours":
         args.lookbackHours = parseNumber(value, "--lookback-hours");
         break;
-      case "max-analyses":
-        args.maxAnalysesPerRun = parseNumber(value, "--max-analyses");
-        break;
-      case "model":
-        args.model = value;
-        break;
       default:
         throw new Error(`Unknown option: --${rawKey}`);
     }
@@ -132,17 +124,15 @@ function writeConfig(args: Args): void {
   const configPath = projectPath("config/job-watch.config.json");
   const config = JSON.parse(fs.readFileSync(examplePath, "utf8")) as {
     candidate: { displayName: string; searchDescription: string };
-    analysis: { openaiModel: string; minScore: number; lookbackHours: number; maxAnalysesPerRun: number };
+    analysis: { minScore: number; lookbackHours: number };
     sources: { dou: { listingUrl: string; categoryName: string } };
     telegram: { enabled: boolean };
   };
 
   config.candidate.displayName = args.name ?? config.candidate.displayName;
   config.candidate.searchDescription = args.search ?? config.candidate.searchDescription;
-  config.analysis.openaiModel = args.model ?? config.analysis.openaiModel;
   config.analysis.minScore = args.minScore ?? config.analysis.minScore;
   config.analysis.lookbackHours = args.lookbackHours ?? config.analysis.lookbackHours;
-  config.analysis.maxAnalysesPerRun = args.maxAnalysesPerRun ?? config.analysis.maxAnalysesPerRun;
   config.telegram.enabled = args.telegram ?? config.telegram.enabled;
 
   if (args.douUrl) {
@@ -319,8 +309,6 @@ Options:
   --dou-url <url>            Exact DOU listing URL
   --min-score <number>       Telegram reporting threshold
   --lookback-hours <number>  Vacancy freshness window
-  --max-analyses <number>    OpenAI analysis cap per run
-  --model <model>            OpenAI model for local npm run check
   --telegram / --no-telegram Enable or disable Telegram reporting
   --force                    Overwrite existing local config/resume/profile files
 `);
