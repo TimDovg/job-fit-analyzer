@@ -1,0 +1,9 @@
+.env
+config/job-watch.config.json
+candidate/job-fit-analyzer/references/candidate-profile.md
+candidate/job-fit-analyzer/references/resume.md
+data/
+browser-profile/
+node_modules/
+dist/
+*.log

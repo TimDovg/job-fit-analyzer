@@ -1,0 +1,27 @@
+{
+  "name": "job-watch-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsx src/index.ts",
+    "login": "tsx src/login.ts",
+    "doctor": "tsx src/doctor.ts",
+    "telegram:send": "tsx src/sendTelegram.ts",
+    "build": "tsc --noEmit",
+    "install-browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.4.7",
+    "openai": "^5.0.0",
+    "playwright": "^1.54.0",
+    "tsx": "^4.19.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  }
+}

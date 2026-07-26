@@ -1,0 +1,39 @@
+{
+  "candidate": {
+    "displayName": "Your Name",
+    "searchDescription": "Front End vacancies"
+  },
+  "analysis": {
+    "openaiModel": "gpt-4.1-mini",
+    "minScore": 5,
+    "lookbackHours": 24,
+    "maxVacanciesPerSource": 20,
+    "maxAnalysesPerRun": 5
+  },
+  "runtime": {
+    "headless": true,
+    "dataDir": "./data",
+    "browserProfileDir": "./browser-profile"
+  },
+  "skill": {
+    "dir": "./candidate/job-fit-analyzer",
+    "skillFile": "SKILL.md",
+    "resumeFile": "references/resume.md",
+    "profileFile": "references/candidate-profile.md"
+  },
+  "sources": {
+    "djinni": {
+      "enabled": true,
+      "dashboardUrl": "https://djinni.co/my/dashboard/",
+      "recommendedSectionName": "Vacancies by my profile"
+    },
+    "dou": {
+      "enabled": true,
+      "listingUrl": "https://jobs.dou.ua/vacancies/?category=Front%20End&from=maybe",
+      "categoryName": "Front End"
+    }
+  },
+  "telegram": {
+    "enabled": true
+  }
+}
