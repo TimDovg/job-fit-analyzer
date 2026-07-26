@@ -22,25 +22,23 @@ The candidate is configured through files, not hardcoded in source code:
 ```bash
 npm install
 npm run install-browsers
-cp .env.example .env
-cp config/job-watch.config.example.json config/job-watch.config.json
-cp candidate/job-fit-analyzer/references/resume.example.md candidate/job-fit-analyzer/references/resume.md
-cp candidate/job-fit-analyzer/references/candidate-profile.example.md candidate/job-fit-analyzer/references/candidate-profile.md
+npm run setup -- --name "Your Name" --resume /path/to/resume.md --search "React TypeScript roles" --dou-category "Front End"
 ```
 
-Fill `.env`:
+The setup command creates local, gitignored files:
+
+- `.env`
+- `config/job-watch.config.json`
+- `candidate/job-fit-analyzer/references/resume.md`
+- `candidate/job-fit-analyzer/references/candidate-profile.md`
+
+Fill `.env` secrets:
 
 ```bash
 OPENAI_API_KEY=...
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 ```
-
-Then fill:
-
-- `config/job-watch.config.json`
-- `candidate/job-fit-analyzer/references/resume.md`
-- `candidate/job-fit-analyzer/references/candidate-profile.md`
 
 Run:
 
@@ -51,6 +49,26 @@ npm run check
 ```
 
 ## Configure A Candidate
+
+The easiest path is:
+
+```bash
+npm run setup -- --name "Jane Doe" --resume ./jane-resume.md --search "Senior Frontend / Full-stack TypeScript roles" --dou-category "Front End" --min-score 6
+```
+
+Useful setup flags:
+
+- `--name`: candidate display name.
+- `--resume`: markdown or text resume path. For PDFs, ask an AI assistant to convert the PDF to markdown first.
+- `--search`: target role description used in config and profile scaffold.
+- `--dou-category`: DOU category name.
+- `--dou-url`: exact DOU listing URL if category is not enough.
+- `--min-score`: Telegram reporting threshold.
+- `--lookback-hours`: vacancy freshness window.
+- `--max-analyses`: OpenAI spending guardrail per run.
+- `--model`: OpenAI model for the local `npm run check` path.
+- `--no-telegram`: keep reports in logs only.
+- `--force`: overwrite existing local setup files.
 
 Use `resume.md` for facts:
 
@@ -168,10 +186,9 @@ Do not commit:
 
 Give an AI assistant this repo plus the candidate resume and ask it to follow `AGENTS.md`. The intended flow is:
 
-1. Create local config and candidate files from examples.
-2. Convert the resume into `resume.md`.
-3. Create `candidate-profile.md` with honest scoring guidance.
-4. Fill `.env` placeholders manually for secrets.
-5. Run `npm run doctor`, `npm run login`, and `npm run check`.
+1. Run `npm run setup -- --name "..." --resume ./resume.md --search "..."`.
+2. Polish `resume.md` and `candidate-profile.md`.
+3. Fill `.env` placeholders manually for secrets.
+4. Run `npm run doctor`, `npm run login`, and `npm run check`.
 
 For Codex scheduled tasks that should use the current Codex model instead of the local OpenAI API path, use `docs/codex-automation-prompt.example.md`.

@@ -8,22 +8,23 @@ Make the vacancy watcher usable for a candidate without hardcoding personal data
 
 ## Files To Create Locally
 
-Create these files from examples if they do not exist:
+Prefer the one-command setup path:
 
 ```bash
-cp .env.example .env
-cp config/job-watch.config.example.json config/job-watch.config.json
-cp candidate/job-fit-analyzer/references/resume.example.md candidate/job-fit-analyzer/references/resume.md
-cp candidate/job-fit-analyzer/references/candidate-profile.example.md candidate/job-fit-analyzer/references/candidate-profile.md
+npm run setup -- --name "Candidate Name" --resume /path/to/resume.md --search "Target roles" --dou-category "Front End"
 ```
+
+Use `--force` only when the user explicitly wants to overwrite existing local candidate files.
 
 Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, or `candidate-profile.md` unless the user explicitly wants to publish their own candidate data.
 
 ## Candidate Configuration Workflow
 
 1. Read the candidate resume or source materials supplied by the user.
-2. Fill `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
-3. Fill `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
+2. If the resume is a PDF or DOCX, convert it to clean markdown first, then pass that markdown file to `npm run setup -- --resume`.
+3. Run `npm run setup -- --name "..." --resume /path/to/resume.md --search "..."`.
+4. Fill or polish `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
+5. Fill or polish `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
    - target roles;
    - preferred domains and work format;
    - strongest technologies;
@@ -31,19 +32,19 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - things not to overclaim;
    - compensation, notice period, language level, relocation/office preferences;
    - strong project stories for application text.
-4. Update `config/job-watch.config.json`:
+6. Update `config/job-watch.config.json` if the setup flags were not enough:
    - `candidate.displayName`;
    - `candidate.searchDescription`;
    - DOU category/listing URL;
    - score threshold and per-run limits;
    - `skill.dir`, `skill.resumeFile`, and `skill.profileFile` only if the candidate files are stored somewhere else.
-5. Ask the user to fill `.env` secrets manually:
+7. Ask the user to fill `.env` secrets manually:
    - `OPENAI_API_KEY`;
    - `TELEGRAM_BOT_TOKEN`;
    - `TELEGRAM_CHAT_ID`.
-6. Run `npm run doctor`.
-7. Run `npm run login` so the user can authenticate Djinni in the Playwright browser profile.
-8. Run `npm run check` and inspect the first analysis for honesty and score calibration.
+8. Run `npm run doctor`.
+9. Run `npm run login` so the user can authenticate Djinni in the Playwright browser profile.
+10. Run `npm run check` and inspect the first analysis for honesty and score calibration.
 
 ## Refactoring Rules
 

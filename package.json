@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "tsx src/setup.ts",
     "check": "tsx src/index.ts",
     "login": "tsx src/login.ts",
     "doctor": "tsx src/doctor.ts",
