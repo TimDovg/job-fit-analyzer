@@ -11,8 +11,16 @@ Make the vacancy watcher usable for a candidate without hardcoding personal data
 Prefer the one-command setup path:
 
 ```bash
-npm run setup -- --name "Candidate Name" --resume /path/to/resume.md --search "Target roles" --dou-category "Front End"
+npm run setup
 ```
+
+Before setup, the user should replace `example_resume.pdf` with the candidate resume PDF and get their Telegram chatId from the shared bot.
+
+The human-facing setup contract is:
+
+1. Replace `example_resume.pdf`.
+2. Get chatId from the shared bot.
+3. Run `npm run setup`.
 
 Use `--force` only when the user explicitly wants to overwrite existing local candidate files.
 
@@ -21,8 +29,8 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 ## Candidate Configuration Workflow
 
 1. Read the candidate resume or source materials supplied by the user.
-2. If the resume is a PDF or DOCX, convert it to clean markdown first, then pass that markdown file to `npm run setup -- --resume`.
-3. Run `npm run setup -- --name "..." --resume /path/to/resume.md --search "..."`.
+2. Ensure `example_resume.pdf` has been replaced with the candidate resume PDF, or use `--resume /path/to/resume`.
+3. Run `npm run setup` and answer any interactive questions, including Telegram chatId. In non-interactive mode, pass `--chat-id`.
 4. Fill or polish `candidate/job-fit-analyzer/references/resume.md` with a complete factual CV in markdown.
 5. Fill or polish `candidate/job-fit-analyzer/references/candidate-profile.md` with positioning guidance:
    - target roles;
@@ -38,12 +46,10 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
    - DOU category/listing URL;
    - score threshold and per-run limits;
    - `skill.dir`, `skill.resumeFile`, and `skill.profileFile` only if the candidate files are stored somewhere else.
-7. Ask the user to fill `.env` Telegram secrets manually if Telegram is enabled:
-   - `TELEGRAM_BOT_TOKEN`;
-   - `TELEGRAM_CHAT_ID`.
+7. Ensure the candidate's `.env` contains `TELEGRAM_CHAT_ID`. The shared bot token should come from the project owner/Codex scheduled task environment, not from the candidate.
 8. Run `npm run doctor`.
 9. Run `npm run login` so the user can authenticate Djinni in the Playwright browser profile.
-10. Create or update a Codex scheduled task using `docs/codex-automation-prompt.example.md`.
+10. Create or update a Codex scheduled task using generated `codex-task-prompt.md`.
 11. Inspect the first scheduled task run for honesty and score calibration.
 
 ## Refactoring Rules
@@ -60,6 +66,7 @@ Do not commit the created `.env`, `config/job-watch.config.json`, `resume.md`, o
 Before publishing to GitHub:
 
 - Ensure `.env` is absent.
+- Ensure `codex-task-prompt.md` is absent.
 - Ensure `config/job-watch.config.json` is absent.
 - Ensure `candidate/job-fit-analyzer/references/resume.md` is absent.
 - Ensure `candidate/job-fit-analyzer/references/candidate-profile.md` is absent.

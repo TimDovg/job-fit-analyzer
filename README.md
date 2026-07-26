@@ -26,25 +26,25 @@ The candidate is configured through files, not hardcoded in source code:
 
 ## Quick Start
 
+Human setup is intentionally only three steps:
+
+1. Replace `example_resume.pdf` with your own resume PDF.
+2. Get your Telegram `chatId` from the shared bot.
+3. Run `npm run setup`.
+
 ```bash
 npm install
 npm run install-browsers
-npm run setup -- --name "Your Name" --resume /path/to/resume.md --search "React TypeScript roles" --dou-category "Front End"
+npm run setup
 ```
 
 The setup command creates local, gitignored files:
 
-- `.env`
+- `.env` with your `TELEGRAM_CHAT_ID`
 - `config/job-watch.config.json`
 - `candidate/job-fit-analyzer/references/resume.md`
 - `candidate/job-fit-analyzer/references/candidate-profile.md`
-
-Fill `.env` only if Telegram reporting is enabled:
-
-```bash
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
-```
+- `codex-task-prompt.md`
 
 Then run:
 
@@ -53,23 +53,34 @@ npm run doctor
 npm run login
 ```
 
-Finally, create a Codex scheduled task using `docs/codex-automation-prompt.example.md`.
+Finally, create a Codex scheduled task using the generated `codex-task-prompt.md`.
 
 ## One-Command Candidate Setup
 
+Default happy path:
+
+1. Replace `example_resume.pdf` with the candidate resume PDF.
+2. Get the candidate's Telegram `chatId` from the shared bot.
+3. Run `npm run setup`.
+
+`npm run setup` will extract the resume, ask for missing values, create local config/profile files, and generate `codex-task-prompt.md`.
+
+For non-interactive setup, pass the chat id directly:
+
 ```bash
-npm run setup -- --name "Jane Doe" --resume ./jane-resume.md --search "Senior Frontend / Full-stack TypeScript roles" --dou-category "Front End" --min-score 6
+npm run setup -- --chat-id 123456789
 ```
 
 Useful setup flags:
 
 - `--name`: candidate display name.
-- `--resume`: markdown or text resume path. For PDFs, ask an AI assistant to convert the PDF to markdown first.
+- `--resume`: resume PDF, markdown, or text path. Defaults to `./example_resume.pdf`.
 - `--search`: target role description used in config and profile scaffold.
 - `--dou-category`: DOU category name.
 - `--dou-url`: exact DOU listing URL if category is not enough.
 - `--min-score`: reporting threshold.
 - `--lookback-hours`: vacancy freshness window.
+- `--chat-id`: Telegram chatId from the shared bot.
 - `--no-telegram`: keep reports in the Codex task only.
 - `--force`: overwrite existing local setup files.
 
@@ -138,6 +149,8 @@ npm run telegram:send -- /tmp/vacancy-report.txt
 
 The Codex scheduled task prompt uses this command after it has already produced the final report text.
 
+The shared bot token should be provided by the owner of the shared bot or the Codex scheduled task environment. Do not publish a bot token in the repository.
+
 ## Public Repo Notes
 
 Safe to commit:
@@ -162,8 +175,8 @@ Do not commit:
 
 Give an AI assistant this repo plus the candidate resume and ask it to follow `AGENTS.md`. The intended flow is:
 
-1. Run `npm run setup -- --name "..." --resume ./resume.md --search "..."`.
+1. Replace `example_resume.pdf` and run `npm run setup`.
 2. Polish `resume.md` and `candidate-profile.md`.
 3. Fill Telegram secrets in `.env` if needed.
 4. Run `npm run doctor` and `npm run login`.
-5. Create the Codex scheduled task from `docs/codex-automation-prompt.example.md`.
+5. Create the Codex scheduled task from `codex-task-prompt.md`.

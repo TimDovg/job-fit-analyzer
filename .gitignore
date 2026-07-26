@@ -1,4 +1,5 @@
 .env
+codex-task-prompt.md
 config/job-watch.config.json
 candidate/job-fit-analyzer/references/candidate-profile.md
 candidate/job-fit-analyzer/references/resume.md

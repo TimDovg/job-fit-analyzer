@@ -1,6 +1,9 @@
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
+import { createInterface } from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
 
 type Args = {
   name?: string;
@@ -10,12 +13,30 @@ type Args = {
   douUrl?: string;
   minScore?: number;
   lookbackHours?: number;
+  chatId?: string;
   telegram?: boolean;
   force: boolean;
   help: boolean;
 };
 
 const rootDir = process.cwd();
+const require = createRequire(import.meta.url);
+const defaultResumePath = "example_resume.pdf";
+const generatedPromptPath = "codex-task-prompt.md";
+
+type ResumeContent = {
+  sourcePath: string;
+  sourceName: string;
+  text: string;
+  extractionNote?: string;
+};
+
+type SetupInputs = Args & {
+  name: string;
+  resume: string;
+  search: string;
+  chatId?: string;
+};
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
@@ -23,6 +44,9 @@ async function main(): Promise<void> {
     printHelp();
     return;
   }
+
+  const resume = await readResume(args.resume ?? defaultResumePath);
+  const inputs = await collectInputs(args, resume);
 
   ensureDirectory("config");
   ensureDirectory("candidate/job-fit-analyzer/references");
@@ -35,9 +59,11 @@ async function main(): Promise<void> {
     args.force
   );
 
-  writeConfig(args);
-  writeResume(args);
-  writeCandidateProfile(args);
+  writeConfig(inputs);
+  writeEnv(inputs);
+  writeResume(resume, args.force);
+  writeCandidateProfile(inputs, resume);
+  writeCodexPrompt(inputs);
 
   console.log("Setup complete.");
   console.log("");
@@ -46,13 +72,12 @@ async function main(): Promise<void> {
   console.log("- config/job-watch.config.json");
   console.log("- candidate/job-fit-analyzer/references/resume.md");
   console.log("- candidate/job-fit-analyzer/references/candidate-profile.md");
+  console.log(`- ${generatedPromptPath}`);
   console.log("");
   console.log("Next:");
-  console.log("1. Fill Telegram secrets in .env if Telegram is enabled: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.");
-  console.log("2. Ask your AI assistant to polish resume.md and candidate-profile.md from the candidate CV.");
-  console.log("3. Run: npm run doctor");
-  console.log("4. Run: npm run login");
-  console.log("5. Create a Codex scheduled task using docs/codex-automation-prompt.example.md.");
+  console.log("1. Run: npm run doctor");
+  console.log("2. Run: npm run login");
+  console.log(`3. Create a Codex scheduled task using ${generatedPromptPath}.`);
 }
 
 function parseArgs(argv: string[]): Args {
@@ -111,6 +136,10 @@ function parseArgs(argv: string[]): Args {
       case "lookback-hours":
         args.lookbackHours = parseNumber(value, "--lookback-hours");
         break;
+      case "chat-id":
+      case "telegram-chat-id":
+        args.chatId = value;
+        break;
       default:
         throw new Error(`Unknown option: --${rawKey}`);
     }
@@ -119,7 +148,52 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-function writeConfig(args: Args): void {
+async function collectInputs(args: Args, resume: ResumeContent): Promise<SetupInputs> {
+  const inferredName = inferName(resume.text);
+  const defaults = {
+    name: args.name ?? inferredName ?? "Configured Candidate",
+    search: args.search ?? "Front End vacancies",
+    chatId: args.chatId
+  };
+
+  if (!process.stdin.isTTY) {
+    return {
+      ...args,
+      name: defaults.name,
+      resume: resume.sourcePath,
+      search: defaults.search,
+      chatId: defaults.chatId
+    };
+  }
+
+  const rl = createInterface({ input, output });
+  try {
+    const name = args.name ?? await askWithDefault(rl, "Candidate name", defaults.name);
+    const search = args.search ?? await askWithDefault(rl, "Target roles / search description", defaults.search);
+    let chatId = args.chatId;
+    if (args.telegram !== false) {
+      chatId = await askWithDefault(rl, "Telegram chatId from the shared bot", defaults.chatId ?? "");
+    }
+
+    return {
+      ...args,
+      name,
+      resume: resume.sourcePath,
+      search,
+      chatId: chatId || undefined
+    };
+  } finally {
+    rl.close();
+  }
+}
+
+async function askWithDefault(rl: ReturnType<typeof createInterface>, label: string, fallback: string): Promise<string> {
+  const suffix = fallback ? ` [${fallback}]` : "";
+  const answer = await rl.question(`${label}${suffix}: `);
+  return answer.trim() || fallback;
+}
+
+function writeConfig(args: SetupInputs): void {
   const examplePath = projectPath("config/job-watch.config.example.json");
   const configPath = projectPath("config/job-watch.config.json");
   const config = JSON.parse(fs.readFileSync(examplePath, "utf8")) as {
@@ -145,40 +219,36 @@ function writeConfig(args: Args): void {
   writeJsonIfAllowed(configPath, config, args.force);
 }
 
-function writeResume(args: Args): void {
-  if (!args.resume) return;
+function writeEnv(args: SetupInputs): void {
+  const envPath = projectPath(".env");
+  const env = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : fs.readFileSync(projectPath(".env.example"), "utf8");
+  const updates: Record<string, string> = {};
+  if (args.chatId) updates.TELEGRAM_CHAT_ID = args.chatId;
 
-  const sourcePath = path.resolve(args.resume);
-  if (!fs.existsSync(sourcePath)) {
-    throw new Error(`Resume file not found: ${sourcePath}`);
-  }
+  fs.writeFileSync(envPath, updateEnv(env, updates));
+}
 
+function writeResume(resume: ResumeContent, force: boolean): void {
   const targetPath = projectPath("candidate/job-fit-analyzer/references/resume.md");
-  if (fs.existsSync(targetPath) && !args.force && fs.readFileSync(targetPath, "utf8").trim() !== fs.readFileSync(projectPath("candidate/job-fit-analyzer/references/resume.example.md"), "utf8").trim()) {
-    console.log(`Skipped existing resume.md. Use --force to overwrite it from ${sourcePath}.`);
+  if (fs.existsSync(targetPath) && !force && fs.readFileSync(targetPath, "utf8").trim() !== fs.readFileSync(projectPath("candidate/job-fit-analyzer/references/resume.example.md"), "utf8").trim()) {
+    console.log(`Skipped existing resume.md. Use --force to overwrite it from ${resume.sourcePath}.`);
     return;
   }
 
-  const raw = fs.readFileSync(sourcePath);
-  const sourceName = path.basename(sourcePath);
-  const text = looksBinary(raw)
-    ? [
-        "# Candidate Resume",
-        "",
-        `Source file: ${sourcePath}`,
-        "",
-        "This appears to be a binary resume file. Ask your AI assistant to extract the CV into clean markdown here.",
-        "",
-        "Keep this file factual: experience, skills, projects, education, languages, and contact/header details."
-      ].join("\n")
-    : [`# Candidate Resume`, ``, `Source file: ${sourceName}`, ``, raw.toString("utf8").trim(), ``].join("\n");
+  const text = [
+    "# Candidate Resume",
+    "",
+    `Source file: ${resume.sourceName}`,
+    resume.extractionNote ? `Extraction note: ${resume.extractionNote}` : "",
+    "",
+    resume.text.trim(),
+    ""
+  ].filter(Boolean).join("\n");
 
   fs.writeFileSync(targetPath, text);
 }
 
-function writeCandidateProfile(args: Args): void {
-  if (!args.name && !args.search) return;
-
+function writeCandidateProfile(args: SetupInputs, resume: ResumeContent): void {
   const targetPath = projectPath("candidate/job-fit-analyzer/references/candidate-profile.md");
   const existing = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf8") : "";
   if (existing.trim() && !isExampleProfile(existing) && !args.force) {
@@ -186,8 +256,7 @@ function writeCandidateProfile(args: Args): void {
     return;
   }
 
-  const name = args.name ?? "";
-  const search = args.search ?? "the configured target roles";
+  const keywords = detectKeywords(resume.text);
 
   const profile = [
     "# Candidate Profile",
@@ -196,11 +265,11 @@ function writeCandidateProfile(args: Args): void {
     "",
     "## Summary",
     "",
-    `Name: ${name}`,
+    `Name: ${args.name}`,
     "Location: ",
     "Current title: ",
     "Years of experience: ",
-    `Preferred roles: ${search}`,
+    `Preferred roles: ${args.search}`,
     "Preferred work format: ",
     "Current direction: ",
     "Languages: ",
@@ -209,7 +278,7 @@ function writeCandidateProfile(args: Args): void {
     "",
     "## Core Strengths",
     "",
-    "- ",
+    ...(keywords.length > 0 ? keywords.map((keyword) => `- ${keyword}`) : ["- "]),
     "",
     "## Work Experience Positioning",
     "",
@@ -223,7 +292,7 @@ function writeCandidateProfile(args: Args): void {
     "## Preferred Roles / Higher Score",
     "",
     "Give higher scores for roles involving:",
-    `- ${search}`,
+    `- ${args.search}`,
     "",
     "## Weak Fits / Lower Score",
     "",
@@ -258,6 +327,27 @@ function writeCandidateProfile(args: Args): void {
   fs.writeFileSync(targetPath, profile);
 }
 
+function writeCodexPrompt(args: SetupInputs): void {
+  const templatePath = projectPath("docs/codex-automation-prompt.example.md");
+  const outputPath = projectPath(generatedPromptPath);
+  const template = fs.readFileSync(templatePath, "utf8");
+  const replacements: Record<string, string> = {
+    PROJECT_DIR: rootDir,
+    CANDIDATE_NAME: args.name,
+    SEARCH_DESCRIPTION: args.search,
+    SKILL_PATH: projectPath("candidate/job-fit-analyzer/SKILL.md"),
+    STATE_PATH: projectPath("data/chatgpt-scheduled-state.json"),
+    TELEGRAM_CHAT_ID: args.chatId ?? ""
+  };
+
+  const prompt = Object.entries(replacements).reduce(
+    (current, [key, value]) => current.replaceAll(`{{${key}}}`, value),
+    template
+  );
+
+  fs.writeFileSync(outputPath, prompt);
+}
+
 function copyIfMissing(from: string, to: string, force: boolean): void {
   const sourcePath = projectPath(from);
   const targetPath = projectPath(to);
@@ -271,6 +361,25 @@ function writeJsonIfAllowed(filePath: string, value: unknown, force: boolean): v
     return;
   }
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function updateEnv(text: string, updates: Record<string, string>): string {
+  const lines = text.split(/\r?\n/);
+  const seen = new Set<string>();
+  const updated = lines.map((line) => {
+    const match = line.match(/^([A-Z0-9_]+)=/);
+    if (!match) return line;
+    const key = match[1];
+    if (!key || !(key in updates)) return line;
+    seen.add(key);
+    return `${key}=${updates[key]}`;
+  });
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!seen.has(key)) updated.push(`${key}=${value}`);
+  }
+
+  return `${updated.join("\n").replace(/\n+$/, "")}\n`;
 }
 
 function ensureDirectory(relativePath: string): void {
@@ -289,26 +398,112 @@ function parseNumber(value: string, label: string): number {
   return parsed;
 }
 
-function looksBinary(buffer: Buffer): boolean {
-  return buffer.subarray(0, 512).includes(0);
-}
-
 function isExampleProfile(text: string): boolean {
   return text.includes("### Company / Project, dates") && text.includes("Name:  ");
 }
 
+async function readResume(rawPath: string): Promise<ResumeContent> {
+  const sourcePath = path.resolve(rawPath);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Resume file not found: ${sourcePath}. Replace ${defaultResumePath} with your resume PDF, or pass --resume /path/to/resume.md.`);
+  }
+
+  const raw = fs.readFileSync(sourcePath);
+  const sourceName = path.basename(sourcePath);
+  const extension = path.extname(sourceName).toLowerCase();
+
+  if (extension === ".pdf") {
+    const text = await extractPdfText(raw);
+    return {
+      sourcePath,
+      sourceName,
+      text,
+      extractionNote: "Extracted automatically from PDF by npm run setup."
+    };
+  }
+
+  return {
+    sourcePath,
+    sourceName,
+    text: raw.toString("utf8")
+  };
+}
+
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const pdfParse = require("pdf-parse") as (input: Buffer) => Promise<{ text?: string }>;
+  const result = await pdfParse(buffer);
+  const text = normalizeResumeText(result.text ?? "");
+  if (!text) {
+    throw new Error("Could not extract text from example_resume.pdf. Try exporting the resume as text/markdown and pass --resume ./resume.md.");
+  }
+  return text;
+}
+
+function inferName(text: string): string | undefined {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => /^[A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,3}$/.test(line));
+}
+
+function detectKeywords(text: string): string[] {
+  const known: Array<[string, RegExp]> = [
+    ["React", /\bReact\b/i],
+    ["TypeScript", /\bTypeScript\b/i],
+    ["JavaScript", /\bJavaScript\b/i],
+    ["Node.js", /\bNode(?:\.js|JS)?\b/i],
+    ["Next.js", /\bNext(?:\.js|JS)?\b/i],
+    ["Vue", /\bVue\b/i],
+    ["Angular", /\bAngular\b/i],
+    ["Python", /\bPython\b/i],
+    ["Java", /\bJava\b/i],
+    [".NET", /\.NET\b/i],
+    ["PHP", /\bPHP\b/i],
+    ["Go", /\bGolang\b|\bGo\b/i],
+    ["Ruby", /\bRuby\b/i],
+    ["Firebase", /\bFirebase\b/i],
+    ["GCP", /\bGCP\b|\bGoogle Cloud\b/i],
+    ["AWS", /\bAWS\b|\bAmazon Web Services\b/i],
+    ["PostgreSQL", /\bPostgreSQL\b|\bPostgres\b/i],
+    ["MySQL", /\bMySQL\b/i],
+    ["MongoDB", /\bMongoDB\b/i],
+    ["GraphQL", /\bGraphQL\b/i],
+    ["REST", /\bREST\b/i],
+    ["Jest", /\bJest\b/i],
+    ["Cypress", /\bCypress\b/i],
+    ["Playwright", /\bPlaywright\b/i],
+    ["Docker", /\bDocker\b/i],
+    ["Kubernetes", /\bKubernetes\b|\bK8s\b/i],
+    ["AI", /\bAI\b|\bArtificial Intelligence\b/i],
+    ["LLM", /\bLLM\b|\bLarge Language Model/i]
+  ];
+  return known.filter(([, pattern]) => pattern.test(text)).map(([keyword]) => keyword).slice(0, 16);
+}
+
+function normalizeResumeText(text: string): string {
+  return text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function printHelp(): void {
   console.log(`Usage:
-  npm run setup -- --name "Jane Doe" --resume ./resume.md --search "React TypeScript roles"
+  npm run setup
+  npm run setup -- --chat-id 123456789
 
 Options:
   --name <name>              Candidate display name
-  --resume <path>            Markdown or text resume to copy into resume.md
+  --resume <path>            Resume PDF, markdown, or text file. Defaults to ./example_resume.pdf
   --search <description>     Search/target role description
   --dou-category <category>  DOU category, e.g. "Front End"
   --dou-url <url>            Exact DOU listing URL
   --min-score <number>       Telegram reporting threshold
   --lookback-hours <number>  Vacancy freshness window
+  --chat-id <id>             Telegram chatId from the shared bot
   --telegram / --no-telegram Enable or disable Telegram reporting
   --force                    Overwrite existing local config/resume/profile files
 `);

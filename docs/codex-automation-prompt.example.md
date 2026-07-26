@@ -9,6 +9,7 @@ Replace placeholders before creating the automation:
 - `{{SEARCH_DESCRIPTION}}`
 - `{{SKILL_PATH}}`
 - `{{STATE_PATH}}`
+- `{{TELEGRAM_CHAT_ID}}`
 
 ```text
 Every scheduled run, check recent {{SEARCH_DESCRIPTION}} for {{CANDIDATE_NAME}} and analyze them with the current Codex model.
@@ -26,6 +27,7 @@ Important constraints:
 - Keep operational problems in two categories:
   - `recoveredWarnings`: transient failures that were successfully retried.
   - `operationalErrors`: unrecovered failures that affected the run.
+- Send vacancy and error Telegram messages to chat id `{{TELEGRAM_CHAT_ID}}` when Telegram is enabled. The shared bot token must be available as `TELEGRAM_BOT_TOKEN` in this project's `.env` or the Codex scheduled task environment; do not print the token.
 
 Workflow:
 1. Read `{{PROJECT_DIR}}/config/job-watch.config.json`.
