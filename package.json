@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup": "tsx src/setup.ts",
+    "prelogin": "playwright install chromium",
     "login": "tsx src/login.ts",
     "doctor": "tsx src/doctor.ts",
     "telegram:send": "tsx src/sendTelegram.ts",

@@ -37,7 +37,6 @@ Human setup is intentionally small:
 
 ```bash
 npm install
-npm run install-browsers
 npm run setup
 ```
 
@@ -57,6 +56,9 @@ Then run:
 npm run doctor
 npm run login
 ```
+
+`npm run setup` installs the required Playwright Chromium browser after setup. `npm run login` also checks/install it before opening Djinni, so a fresh Windows clone does not need a separate browser-install command.
+If a network or cache issue interrupts that install, run `npm run install-browsers` once and retry `npm run login`.
 
 Finally, create a Codex scheduled task using the generated `codex-task-prompt.md`.
 

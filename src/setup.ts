@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
   writeResume(resume, args.force);
   writeCandidateProfile(inputs, resume);
   writeCodexPrompt(inputs);
+  installPlaywrightBrowser();
 
   console.log("Setup complete.");
   console.log("");
@@ -381,6 +383,19 @@ function writeCodexPrompt(args: SetupInputs): void {
   );
 
   fs.writeFileSync(outputPath, prompt);
+}
+
+function installPlaywrightBrowser(): void {
+  console.log("");
+  console.log("Installing Playwright Chromium browser...");
+  const result = spawnSync("npx", ["playwright", "install", "chromium"], {
+    stdio: "inherit",
+    shell: process.platform === "win32"
+  });
+
+  if (result.status !== 0) {
+    throw new Error("Could not install Playwright Chromium. Run `npx playwright install chromium` and retry.");
+  }
 }
 
 function copyIfMissing(from: string, to: string, force: boolean): void {
